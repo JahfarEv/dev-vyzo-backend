@@ -182,7 +182,7 @@ class Utility {
             }
         }
 
-        const { consultationTime } = doctor
+        const { consultationTime } = slotModel
         let accumulatedTime = consultationTime;
 
         const slotsWithTime = slots.map(token => {
