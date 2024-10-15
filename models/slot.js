@@ -80,7 +80,7 @@ const SlotSchema = new mongoose.Schema({
   consultationTime: { // New field for consultation time
     type: Number,
     default:5,
-    required: false, // Optional if not set at the time of creation
+    // required: false, // Optional if not set at the time of creation
   },
   tokenStatus: { // New field for token status
     type: String,

@@ -141,65 +141,158 @@ class Utility {
   // }
 
 
-  static async upcomingTokens(doctorId) {
-    try {
-        const doctor = await doctorModel.findById(doctorId)
+//   static async upcomingTokens(doctorId) {
+//     try {
+//         const doctor = await doctorModel.findById(doctorId)
 
-        const presenceData = await doctorPresenceModel.findOne({
-            date: moment().format('DD/MM/YYYY'),
-            doctor: doctorId,
-        })
+//         const presenceData = await doctorPresenceModel.findOne({
+//             date: moment().format('DD/MM/YYYY'),
+//             doctor: doctorId,
+//         })
 
-        const slots = await slotModel.find({
-            date: moment().format('DD/MM/YYYY'),
-            doctor: doctorId,
-            fileArrive: true,
-            $or: [
-                { startingTime: { $exists: false } },
-                { startingTime: { $eq: '' } },
-            ]
-        }).select('tokenNo orderNumber')
-            .sort('orderNumber')
-            .lean()
+//         const slots = await slotModel.find({
+//             date: moment().format('DD/MM/YYYY'),
+//             doctor: doctorId,
+//             fileArrive: true,
+//             $or: [
+//                 { startingTime: { $exists: false } },
+//                 { startingTime: { $eq: '' } },
+//             ]
+//         }).select('tokenNo orderNumber')
+//             .sort('orderNumber')
+//             .lean()
 
-        let currentTime
+//         let currentTime
 
-        if (!presenceData) {
-            currentTime = moment.max(moment(), moment(doctor.workingHoursStarting, 'HH:mm'));
-        } else {
-            if (presenceData.outTime) { return [] }
-            const lastBreak = presenceData.breaks[presenceData.breaks.length - 1]
+//         if (!presenceData) {
+//             currentTime = moment.max(moment(), moment(doctor.workingHoursStarting, 'HH:mm'));
+//         } else {
+//             if (presenceData.outTime) { return [] }
+//             const lastBreak = presenceData.breaks[presenceData.breaks.length - 1]
 
-            if (lastBreak) {
-                if (!lastBreak.endTime) {
-                    const breakEndTime = moment(lastBreak.startTime, 'HH:mm:ss').add(lastBreak.estimatedTime, 'minutes');
-                    currentTime = moment.max(moment(), breakEndTime);
-                } else {
-                    currentTime = moment();
-                }
-            } else {
-                currentTime = moment();
-            }
+//             if (lastBreak) {
+//                 if (!lastBreak.endTime) {
+//                     const breakEndTime = moment(lastBreak.startTime, 'HH:mm:ss').add(lastBreak.estimatedTime, 'minutes');
+//                     currentTime = moment.max(moment(), breakEndTime);
+//                 } else {
+//                     currentTime = moment();
+//                 }
+//             } else {
+//                 currentTime = moment();
+//             }
+//         }
+
+//         const { consultationTime } = doctor
+//         let accumulatedTime = consultationTime;
+
+//         const slotsWithTime = slots.map(token => {
+//             var expectedTime = moment(currentTime).add(accumulatedTime, 'minutes');
+//             accumulatedTime += consultationTime;
+
+//             return {
+//                 ...token,
+//                 expectedTime: expectedTime.format('hh:mm A') // Change to 12-hour format
+//             };
+//         });
+
+//         return slotsWithTime
+//     } catch (error) {
+//         throw error
+//     }
+// }
+
+
+
+static async upcomingTokens(doctorId) {
+  try {
+    // Fetch doctor data
+    const doctor = await doctorModel.findById(doctorId);
+
+    // Fetch today's presence data for the doctor
+    const presenceData = await doctorPresenceModel.findOne({
+      date: moment().format("DD/MM/YYYY"),
+      doctor: doctorId,
+    });
+
+    // Fetch today's tokens where fileArrive is true and no starting time is set
+    const slots = await slotModel
+      .find({
+        date: moment().format("DD/MM/YYYY"),
+        doctor: doctorId,
+        fileArrive: true,
+        $or: [{ startingTime: { $exists: false } }, { startingTime: { $eq: "" } }],
+      })
+      .select("tokenNo orderNumber startingTime endingTime")
+      .sort("orderNumber")
+      .lean();
+
+    // Calculate average consultation time based on existing tokens
+    let totalConsultationTime = 0;
+    let tokenCount = 0;
+
+    for (const slot of slots) {
+      if (slot.startingTime && slot.endingTime) {
+        const startTime = moment(slot.startingTime, "HH:mm");
+        const endTime = moment(slot.endingTime, "HH:mm");
+
+        const duration = endTime.diff(startTime, "minutes");
+
+        if (duration > 0) {
+          totalConsultationTime += duration;
+          tokenCount += 1;
         }
-
-        const { consultationTime } = slotModel
-        let accumulatedTime = consultationTime;
-
-        const slotsWithTime = slots.map(token => {
-            var expectedTime = moment(currentTime).add(accumulatedTime, 'minutes');
-            accumulatedTime += consultationTime;
-
-            return {
-                ...token,
-                expectedTime: expectedTime.format('hh:mm A') // Change to 12-hour format
-            };
-        });
-
-        return slotsWithTime
-    } catch (error) {
-        throw error
+      }
     }
+
+    // Default consultation time from doctor model if no valid slots
+    let averageConsultationTime = tokenCount > 0
+      ? totalConsultationTime / tokenCount
+      : doctor.consultationTime; // Use static consultation time if no valid tokens
+
+    // Determine the current time
+    let currentTime;
+
+    if (!presenceData) {
+      currentTime = moment.max(moment(), moment(doctor.workingHoursStarting, "HH:mm"));
+    } else {
+      if (presenceData.outTime) {
+        return [];
+      }
+
+      const lastBreak = presenceData.breaks[presenceData.breaks.length - 1];
+
+      if (lastBreak) {
+        if (!lastBreak.endTime) {
+          const breakEndTime = moment(lastBreak.startTime, "HH:mm:ss").add(lastBreak.estimatedTime, "minutes");
+          currentTime = moment.max(moment(), breakEndTime);
+        } else {
+          currentTime = moment();
+        }
+      } else {
+        currentTime = moment();
+      }
+    }
+
+    // Use dynamic average consultation time for upcoming tokens
+    let accumulatedTime = averageConsultationTime;
+
+    // Map slots with the expected time for each token
+    const slotsWithTime = slots.map(token => {
+      const expectedTime = moment(currentTime).add(accumulatedTime, "minutes");
+      accumulatedTime += averageConsultationTime;
+
+      return {
+        ...token,
+        expectedTime: expectedTime.format("hh:mm A"), // Format to 12-hour clock
+      };
+    });
+
+    return slotsWithTime;
+  } catch (error) {
+    throw error;
+  }
 }
+
 
 
   static async tokensOfDoctor(doctorId) {
