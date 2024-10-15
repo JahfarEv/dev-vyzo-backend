@@ -182,12 +182,12 @@ class Utility {
             }
         }
 
-        const { averageConsultationTime } = doctor
-        let accumulatedTime = averageConsultationTime;
+        const { consultationTime } = doctor
+        let accumulatedTime = consultationTime;
 
         const slotsWithTime = slots.map(token => {
             var expectedTime = moment(currentTime).add(accumulatedTime, 'minutes');
-            accumulatedTime += averageConsultationTime;
+            accumulatedTime += consultationTime;
 
             return {
                 ...token,

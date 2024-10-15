@@ -1,46 +1,97 @@
 const mongoose = require("mongoose");
 
-const SlotSchema = new mongoose.Schema(
-  {
-    tokenNo: {
-      type: Number,
-      required: true,
-    },
-    doctor: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Doctors',
-      required: true
-    },
-    date: {  //  in the format of DD/MM/YYYY
-      type: String,
-      required: true
-    },
-    fileArrive: {
-      type: Boolean,
-      required: true,
-      default: false,
-    },
-    orderNumber: {
-      type: Number,
-      required: true,
-    },
-    startingTime: {
-      type: String,
-      required: false
-    },
-    endingTime: {
-      type: String,
-      required: false
-    },
+// const SlotSchema = new mongoose.Schema(
+//   {
+//     tokenNo: {
+//       type: Number,
+//       required: true,
+//     },
+//     doctor: {
+//       type: mongoose.Schema.Types.ObjectId,
+//       ref: 'Doctors',
+//       required: true
+//     },
+//     date: {  //  in the format of DD/MM/YYYY
+//       type: String,
+//       required: true
+//     },
+//     fileArrive: {
+//       type: Boolean,
+//       required: true,
+//       default: false,
+//     },
+//     orderNumber: {
+//       type: Number,
+//       required: true,
+//     },
+//     startingTime: {
+//       type: String,
+//       required: false
+//     },
+//     endingTime: {
+//       type: String,
+//       required: false
+//     },
     
-  },
-  {
-    timestamps: true,
-    minimize: false
-  },
+//   },
+//   {
+//     timestamps: true,
+//     minimize: false
+//   },
   
-);
-SlotSchema.index({ doctor: 1, date: 1, tokenNo: 1 }, { unique: true });
+// );
+// SlotSchema.index({ doctor: 1, date: 1, tokenNo: 1 }, { unique: true });
 
+
+// module.exports = mongoose.model("Slots", SlotSchema);
+
+
+const SlotSchema = new mongoose.Schema({
+  tokenNo: {
+    type: Number,
+    required: true,
+  },
+  doctor: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Doctors',
+    required: true,
+  },
+  date: { // in the format of DD/MM/YYYY
+    type: String,
+    required: true,
+  },
+  fileArrive: {
+    type: Boolean,
+    required: true,
+    default: false,
+  },
+  orderNumber: {
+    type: Number,
+    required: true,
+  },
+  startingTime: {
+    type: String,
+    required: false,
+  },
+  endingTime: {
+    type: String,
+    required: false,
+  },
+  consultationTime: { // New field for consultation time
+    type: Number,
+    default:5,
+    required: false, // Optional if not set at the time of creation
+  },
+  tokenStatus: { // New field for token status
+    type: String,
+    enum: ['pending', 'in-progress', 'completed', 'cancelled'],
+    default: 'pending',
+  },
+}, {
+  timestamps: true,
+  minimize: false,
+});
+
+SlotSchema.index({ doctor: 1, date: 1, tokenNo: 1 }, { unique: true });
 
 module.exports = mongoose.model("Slots", SlotSchema);
