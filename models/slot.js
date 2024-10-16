@@ -69,6 +69,11 @@ const SlotSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  consultationTime: { // New field for consultation time
+    type: Number,
+    default:5,
+    // required: false, // Optional if not set at the time of creation
+  },
   startingTime: {
     type: String,
     required: false,
@@ -77,11 +82,7 @@ const SlotSchema = new mongoose.Schema({
     type: String,
     required: false,
   },
-  consultationTime: { // New field for consultation time
-    type: Number,
-    default:5,
-    // required: false, // Optional if not set at the time of creation
-  },
+  
   tokenStatus: { // New field for token status
     type: String,
     enum: ['pending', 'in-progress', 'completed', 'cancelled'],

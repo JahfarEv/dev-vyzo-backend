@@ -29,7 +29,6 @@ cron.schedule("0 0 * * *", async () => {
   }
 });
 
-
 // const updateProfile = async (req, res) => {
 //   try {
 //     let { totalTokensPerDay, recallAfter, averageConsultationTime } = req.body;
@@ -68,14 +67,16 @@ cron.schedule("0 0 * * *", async () => {
 //   }
 // };
 
-
 const updateProfile = async (req, res) => {
   try {
     let { totalTokensPerDay, recallAfter, consultationTime } = req.body;
 
     // Ensure averageConsultationTime is stored in minutes
-    if (consultationTime < 0) {  // Adding a check for negative values
-      return res.status(status.ERROR).send(utility.errorRes("Consultation time cannot be negative."));
+    if (consultationTime < 0) {
+      // Adding a check for negative values
+      return res
+        .status(status.ERROR)
+        .send(utility.errorRes("Consultation time cannot be negative."));
     }
 
     const [workingHoursStarting, workingHoursEnding] =
@@ -98,8 +99,8 @@ const updateProfile = async (req, res) => {
 
     // Update average consultation time for all slots of this doctor
     await slotModel.updateMany(
-      { doctor: req.doctorData.doctorId },  // Update all tokens for this doctor
-      { $set: { consultationTime: consultationTime } }  // Set average consultation time
+      { doctor: req.doctorData.doctorId }, // Update all tokens for this doctor
+      { $set: { consultationTime: consultationTime } } // Set average consultation time
     );
 
     return res
@@ -113,7 +114,6 @@ const updateProfile = async (req, res) => {
   }
 };
 
-
 //test
 
 const updateTokenConsultationTime = async (req, res) => {
@@ -123,18 +123,26 @@ const updateTokenConsultationTime = async (req, res) => {
 
     // Validate consultation time
     if (consultationTime < 0) {
-      return res.status(status.ERROR).send(utility.errorRes("Consultation time cannot be negative."));
+      return res
+        .status(status.ERROR)
+        .send(utility.errorRes("Consultation time cannot be negative."));
     }
 
     // Update specific token's consultation time
     const updatedToken = await slotModel.findOneAndUpdate(
-      { doctor: doctorId, tokenNo: tokenNo, date: moment().format("DD/MM/YYYY") },
+      {
+        doctor: doctorId,
+        tokenNo: tokenNo,
+        date: moment().format("DD/MM/YYYY"),
+      },
       { $set: { consultationTime: consultationTime } },
       { new: true }
     );
 
     if (!updatedToken) {
-      return res.status(status.ERROR).send(utility.errorRes("Token not found or invalid."));
+      return res
+        .status(status.ERROR)
+        .send(utility.errorRes("Token not found or invalid."));
     }
 
     return res
@@ -147,8 +155,6 @@ const updateTokenConsultationTime = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
-
-
 
 
 const doctorDetails = async (req, res) => {
@@ -206,7 +212,6 @@ const doctorDetails = async (req, res) => {
 //   }
 // };
 
-
 const getTodayTokens = async (req, res) => {
   try {
     const { doctorId } = req.doctorData;
@@ -251,20 +256,17 @@ const getTodayTokens = async (req, res) => {
     }
 
     // Calculate the average if tokenCount is greater than 0
-    const averageConsultationTimes = tokenCount > 0
-      ? totalConsultationTime / tokenCount
-      : 0; // Avoid division by zero
+    const averageConsultationTimes =
+      tokenCount > 0 ? totalConsultationTime / tokenCount : 0; // Avoid division by zero
 
-    return res
-      .status(status.SUCCESS)
-      .send(
-        utility.successRes(MSG.foundSuccessfully, {
-          tokens: slots,
-          presenceData,
-          doctor,
-          averageConsultationTimes, // Include average consultation time in the response
-        })
-      );
+    return res.status(status.SUCCESS).send(
+      utility.successRes(MSG.foundSuccessfully, {
+        tokens: slots,
+        presenceData,
+        doctor,
+        averageConsultationTimes, // Include average consultation time in the response
+      })
+    );
   } catch (error) {
     console.log(error);
     return res
@@ -273,10 +275,9 @@ const getTodayTokens = async (req, res) => {
   }
 };
 
-
 module.exports = {
   updateProfile,
   getTodayTokens,
   doctorDetails,
-  updateTokenConsultationTime
+  updateTokenConsultationTime,
 };

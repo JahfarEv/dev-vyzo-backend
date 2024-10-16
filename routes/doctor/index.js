@@ -7,4 +7,5 @@ router.put('/udpateProfile', doctorController.updateProfile)
   // .get('/tokens/:tokenNo', doctorController.getIndividualToken)
   .put('/tokens', doctorController.updateTokenConsultationTime)
 
+
 module.exports = router
