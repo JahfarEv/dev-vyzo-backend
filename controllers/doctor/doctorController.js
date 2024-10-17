@@ -7,6 +7,7 @@ const moment = require("moment-timezone");
 const doctorModel = require("../../models/doctor");
 moment.tz.setDefault("Asia/Kolkata");
 const cron = require("node-cron");
+const patientModel = require('../../models/patients'); 
 
 // Schedule a cron job to run every day at midnight (00:00)
 cron.schedule("0 0 * * *", async () => {
@@ -298,10 +299,57 @@ const getTodayTokens = async (req, res) => {
   }
 };
 
+
+//patient details
+
+// Assuming it's in the models directory
+
+const savePatientDetails = async (req, res) => {
+  try {
+    const { name, mobileNumber, remarks } = req.body;
+    const { doctorId } = req.doctorData;// Extract doctor ID from the request
+console.log(name, mobileNumber,doctorId);
+
+    // Basic validation for mobile number and name
+    if (!name || !mobileNumber) {
+      return res.status(400).send(utility.errorRes('Name and mobile number are required.'));
+    }
+
+    // Ensure mobile number format is valid (optional)
+    const isValidMobile = /^[0-9]{10}$/.test(mobileNumber);
+    if (!isValidMobile) {
+      return res.status(400).send(utility.errorRes('Invalid mobile number format.'));
+    }
+
+    // Check if the patient already exists for this doctor
+    let existingPatient = await patientModel.findOne({ mobileNumber, doctor: doctorId });
+    if (existingPatient) {
+      return res.status(400).send(utility.errorRes('Patient with this mobile number already exists for this doctor.'));
+    }
+
+    // Create a new patient record
+    const newPatient = new patientModel({
+      name,
+      mobileNumber,
+      remarks,
+      doctor: doctorId, // Associate patient with the doctor
+    });
+
+    await newPatient.save();
+
+    return res.status(200).send(utility.successRes('Patient details saved successfully.', newPatient));
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send(utility.errorRes('Something went wrong while saving patient details.'));
+  }
+};
+
+
 module.exports = {
   updateProfile,
   getTodayTokens,
   doctorDetails,
   // updateTokenConsultationTime,
-  getCurrentTokenWithTime
+  getCurrentTokenWithTime,
+  savePatientDetails
 };

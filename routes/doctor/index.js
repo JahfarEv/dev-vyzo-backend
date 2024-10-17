@@ -5,8 +5,7 @@ router
   .put("/udpateProfile", doctorController.updateProfile)
   .get("/todayTokens", doctorController.getTodayTokens)
   .get("/profile", doctorController.doctorDetails)
-  // .get('/tokens/:tokenNo', doctorController.getIndividualToken)
-  // .put("/tokens", doctorController.updateTokenConsultationTime)
-  .put("/current-token", doctorController.getCurrentTokenWithTime);
+  .put("/current-token", doctorController.getCurrentTokenWithTime)
+  .post("/save-patient", doctorController.savePatientDetails)
 
 module.exports = router;
