@@ -150,19 +150,21 @@ class Utility {
         doctor: doctorId,
       });
   
-      const slots = await slotModel.find({
+      // Fetch current token to get its expected end time
+      const currentToken = await slotModel.findOne({
         date: moment().format('DD/MM/YYYY'),
         doctor: doctorId,
         fileArrive: true,
+        startingTime: { $exists: true, $ne: "" },
         $or: [
-          { startingTime: { $exists: false } },
-          { startingTime: { $eq: '' } },
-        ],
+          { endingTime: { $exists: false } },
+          { endingTime: '' },
+        ]
       })
-        .select('tokenNo orderNumber consultationTime') // Ensure consultationTime is included
-        .sort('orderNumber')
-        .lean();
+      .sort('orderNumber') // Assuming tokens are ordered by orderNumber
+      .lean();
   
+      // Calculate the current time for determining the start time for upcoming tokens
       let currentTime;
   
       if (!presenceData) {
@@ -179,37 +181,60 @@ class Utility {
         }
       }
   
-      // Initialize the accumulated time to keep track of total consultation time
-      // Initialize accumulatedTime with the consultationTime of the first slot
-let accumulatedTime = slots.length > 0 ? slots[0].consultationTime || 0 : 0;
-console.log(accumulatedTime);
-
-// Process each slot to calculate expected times
-const slotsWithTime = slots.map((slot, index) => {
-  const consultationTime = slot.consultationTime || 0; // Get consultation time from the slot
-
-  // Calculate expected start time for the current token based on the current time and accumulated consultation time
-  const expectedStartTime = moment(currentTime).add(accumulatedTime, 'minutes');
-
-  // Calculate expected end time based on the consultation time of the current token
-  const expectedEndTime = moment(expectedStartTime).add(consultationTime, 'minutes');
-
-  // Set accumulatedTime to consultationTime for the next token (for the next iteration)
-  accumulatedTime += consultationTime;
-
-  return {
-    ...slot,
-    expectedTime: expectedStartTime.format('hh:mm A'), // Start time for the token
-    expectedEndTime: expectedEndTime.format('hh:mm A'), // End time for the token
-  };
-});
-
-return slotsWithTime;
-
+      // Initialize the accumulated time for upcoming tokens
+      let accumulatedTime = 0;
+  
+      // If there is a current token, use its expected end time as the starting point
+      if (currentToken) {
+        const currentConsultationTime = currentToken.consultationTime || 0; // Get consultation time from current token
+        const expectedEndTime = moment(currentTime)
+          .add(currentConsultationTime, 'minutes') // Calculate expected end time
+          .format('HH:mm'); // Format to HH:mm for further calculations
+  
+        // Set the current time to the expected end time for upcoming tokens
+        currentTime = moment(expectedEndTime, 'HH:mm');
+      }
+  
+      const slots = await slotModel.find({
+        date: moment().format('DD/MM/YYYY'),
+        doctor: doctorId,
+        fileArrive: true,
+        $or: [
+          { startingTime: { $exists: false } },
+          { startingTime: { $eq: '' } },
+        ],
+      })
+      .select('tokenNo orderNumber consultationTime') // Ensure consultationTime is included
+      .sort('orderNumber')
+      .lean();
+  
+      // Process each slot to calculate expected times
+      const slotsWithTime = slots.map((slot) => {
+        const consultationTime = slot.consultationTime || 0; // Get consultation time from the slot
+  
+        // Calculate expected start time for the current token based on the current time and accumulated consultation time
+        const expectedStartTime = moment(currentTime).add(accumulatedTime, 'minutes');
+  
+        // Calculate expected end time based on the consultation time of the current token
+        const expectedEndTime = moment(expectedStartTime).add(consultationTime, 'minutes');
+  
+        // Update accumulatedTime for the next iteration
+        accumulatedTime += consultationTime;
+  
+        return {
+          ...slot,
+          expectedTime: expectedStartTime.format('hh:mm A'), // Start time for the token
+          expectedEndTime: expectedEndTime.format('hh:mm A'), // End time for the token
+        };
+      });
+  
+      return slotsWithTime;
+  
     } catch (error) {
       throw error;
     }
   }
+  
   
 
   static async tokensOfDoctor(doctorId) {
@@ -227,29 +252,84 @@ return slotsWithTime;
     }
   }
 
-  static async currentToken(doctorId) {
-    try {
-      const token = await slotModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
-        doctor: doctorId,
-        startingTime: { $exists: true, $ne: "" },
-        $or: [
-          {
-            endingTime: { $exists: false }
-          },
-          {
-            endingTime: ''
-          },
-        ]
-      }).select('tokenNo').lean()
+//   static async currentToken(doctorId) {
+//     try {
+//       const token = await slotModel.findOne({
+//         date: moment().format('DD/MM/YYYY'),
+//         doctor: doctorId,
+//         startingTime: { $exists: true, $ne: "" },
+//         $or: [
+//           {
+//             endingTime: { $exists: false }
+//           },
+//           {
+//             endingTime: ''
+//           },
+//         ]
+//       }).select('tokenNo consultationTime startingTime').lean()
+// console.log(token.tokenNo);
 
-      if (!token) return null
+//       if (!token) return null
+//       const tokenNo = token.tokenNo
+     
+//       return tokenNo
+      
+//     } catch (error) {
+//       throw error
+//     }
+//   }
 
-      return token.tokenNo
-    } catch (error) {
-      throw error
-    }
+
+static async currentToken(doctorId, additionalTime = 0) {
+  try {
+    // Fetch the current token with consultation time
+    const token = await slotModel.findOne({
+      date: moment().format('DD/MM/YYYY'),
+      doctor: doctorId,
+      startingTime: { $exists: true, $ne: "" },
+      $or: [
+        { endingTime: { $exists: false } },
+        { endingTime: '' },
+      ]
+    }).select('tokenNo consultationTime startingTime').lean();
+
+    if (!token) return null;
+
+    // Log values for debugging
+    console.log('Current Consultation Time:', token.consultationTime);
+    console.log('Additional Time:', additionalTime);
+
+    // Ensure consultationTime defaults to 0 if not a valid number
+    const existingConsultationTime = token.consultationTime || 0;
+    const updatedConsultationTime = existingConsultationTime + additionalTime;
+
+    // Log updated consultation time for debugging
+    console.log('Updated Consultation Time:', updatedConsultationTime);
+
+    // Update the database with the new consultation time
+    await slotModel.updateOne(
+      { _id: token._id }, // Find the token by its ID
+      { consultationTime: updatedConsultationTime } // Update consultationTime
+    );
+
+    // Calculate expected end time based on the updated consultation time
+    const expectedEndTime = moment(token.startingTime, 'HH:mm:ss')
+      .add(updatedConsultationTime, 'minutes')
+      .format('hh:mm A');
+
+    return {
+      tokenNo: token.tokenNo,
+      consultationTime: updatedConsultationTime,
+      expectedEndTime: expectedEndTime
+    };
+  } catch (error) {
+    console.error("Error in currentToken:", error);
+    throw error; // Rethrow the error for further handling
   }
+}
+
+
+
 
   static async doctorPresenceStatus(doctorId) {
     try {

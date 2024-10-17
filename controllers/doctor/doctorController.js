@@ -116,43 +116,66 @@ const updateProfile = async (req, res) => {
 
 //test
 
-const updateTokenConsultationTime = async (req, res) => {
+// const updateTokenConsultationTime = async (req, res) => {
+//   try {
+//     const { tokenNo, consultationTime } = req.body;
+//     const { doctorId } = req.doctorData;
+
+//     // Validate consultation time
+//     if (consultationTime < 0) {
+//       return res
+//         .status(status.ERROR)
+//         .send(utility.errorRes("Consultation time cannot be negative."));
+//     }
+
+//     // Update specific token's consultation time
+//     const updatedToken = await slotModel.findOneAndUpdate(
+//       {
+//         doctor: doctorId,
+//         tokenNo: tokenNo,
+//         date: moment().format("DD/MM/YYYY"),
+//       },
+//       { $set: { consultationTime: consultationTime } },
+//       { new: true }
+//     );
+
+//     if (!updatedToken) {
+//       return res
+//         .status(status.ERROR)
+//         .send(utility.errorRes("Token not found or invalid."));
+//     }
+
+//     return res
+//       .status(status.SUCCESS)
+//       .send(utility.successRes(MSG.updatedSuccessfully, updatedToken));
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(status.ERROR)
+//       .send(utility.errorRes(MSG.somethingWentWrong));
+//   }
+// };
+
+// CurrentTokenWithTime
+
+const getCurrentTokenWithTime = async (req, res) => {
   try {
-    const { tokenNo, consultationTime } = req.body;
-    const { doctorId } = req.doctorData;
+    const { doctorId } = req.doctorData; // Extract doctorId from request
+    const { additionalTime } = req.body; // Extract additionalTime from request body
 
-    // Validate consultation time
-    if (consultationTime < 0) {
-      return res
-        .status(status.ERROR)
-        .send(utility.errorRes("Consultation time cannot be negative."));
+    // Validate doctorId and additionalTime...
+    
+    // Fetch and update the current token with the additional consultation time
+    const token = await utility.currentToken(doctorId, additionalTime);
+
+    if (!token) {
+      return res.status(status.NOT_FOUND).send(utility.errorRes(MSG.tokenNotFound));
     }
 
-    // Update specific token's consultation time
-    const updatedToken = await slotModel.findOneAndUpdate(
-      {
-        doctor: doctorId,
-        tokenNo: tokenNo,
-        date: moment().format("DD/MM/YYYY"),
-      },
-      { $set: { consultationTime: consultationTime } },
-      { new: true }
-    );
-
-    if (!updatedToken) {
-      return res
-        .status(status.ERROR)
-        .send(utility.errorRes("Token not found or invalid."));
-    }
-
-    return res
-      .status(status.SUCCESS)
-      .send(utility.successRes(MSG.updatedSuccessfully, updatedToken));
+    return res.status(status.SUCCESS).send(utility.successRes(MSG.foundSuccessfully, token));
   } catch (error) {
-    console.log(error);
-    return res
-      .status(status.ERROR)
-      .send(utility.errorRes(MSG.somethingWentWrong));
+    console.error("Error in getCurrentTokenWithTime:", error);
+    return res.status(status.ERROR).send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
 
@@ -279,5 +302,6 @@ module.exports = {
   updateProfile,
   getTodayTokens,
   doctorDetails,
-  updateTokenConsultationTime,
+  // updateTokenConsultationTime,
+  getCurrentTokenWithTime
 };

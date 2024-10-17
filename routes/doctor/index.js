@@ -1,11 +1,12 @@
-const router = require('express').Router()
-const doctorController = require('../../controllers/doctor/doctorController')
+const router = require("express").Router();
+const doctorController = require("../../controllers/doctor/doctorController");
 
-router.put('/udpateProfile', doctorController.updateProfile)
-  .get('/todayTokens', doctorController.getTodayTokens)
-  .get('/profile', doctorController.doctorDetails)
+router
+  .put("/udpateProfile", doctorController.updateProfile)
+  .get("/todayTokens", doctorController.getTodayTokens)
+  .get("/profile", doctorController.doctorDetails)
   // .get('/tokens/:tokenNo', doctorController.getIndividualToken)
-  .put('/tokens', doctorController.updateTokenConsultationTime)
+  // .put("/tokens", doctorController.updateTokenConsultationTime)
+  .put("/current-token", doctorController.getCurrentTokenWithTime);
 
-
-module.exports = router
+module.exports = router;
