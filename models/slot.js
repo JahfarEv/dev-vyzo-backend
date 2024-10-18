@@ -70,7 +70,7 @@ const SlotSchema = new mongoose.Schema({
     required: true,
   },
   consultationTime: { // New field for consultation time
-    type: Number,
+    type: Number, //rashid sugest type is string
     default:5,
     // required: false, // Optional if not set at the time of creation
   },

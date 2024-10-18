@@ -71,6 +71,7 @@ cron.schedule("0 0 * * *", async () => {
 const updateProfile = async (req, res) => {
   try {
     let { totalTokensPerDay, recallAfter, consultationTime } = req.body;
+console.log(consultationTime);
 
     // Ensure averageConsultationTime is stored in minutes
     if (consultationTime < 0) {
@@ -114,6 +115,29 @@ const updateProfile = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
+
+//excel
+
+const excel = async(req,res)=>{
+  try {
+    const { doctorId } = req.doctorData; 
+    console.log(doctorId);
+    // Extract doctorId from request
+    const result = await utility.exportSlotsToExcel(doctorId);
+    if (result.filePath) {
+      res.download(result.filePath, (err) => {
+        if (err) {
+          res.status(500).send('Error downloading the file.');
+        }
+      });
+    } else {
+      res.status(404).send(result.message);
+    }
+  } catch (error) {
+    res.status(500).send(`Server error: ${error.message}`);
+  }
+}
+
 
 //test
 
@@ -351,5 +375,6 @@ module.exports = {
   doctorDetails,
   // updateTokenConsultationTime,
   getCurrentTokenWithTime,
-  savePatientDetails
+  savePatientDetails,
+  excel
 };

@@ -1,71 +1,74 @@
-const crypto = require('crypto')
-const bcrypt = require('bcrypt')
-const mongoose = require('mongoose')
-const doctorPresenceModel = require('../models/doctorPresence')
-const slotModel = require('../models/slot')
-const doctorModel = require('../models/doctor')
-const moment = require('moment-timezone');
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
+const mongoose = require("mongoose");
+const doctorPresenceModel = require("../models/doctorPresence");
+const slotModel = require("../models/slot");
+const doctorModel = require("../models/doctor");
+const moment = require("moment-timezone");
 moment.tz.setDefault("Asia/Kolkata");
-var QRCode = require('qrcode')
-
+var QRCode = require("qrcode");
+const ExcelJS = require("exceljs");
+const fs = require("fs");
+const path = require("path");
+const { log } = require("console");
 
 class Utility {
   // eslint-disable-next-line default-param-last
-  static successRes(message = '', data) {
+  static successRes(message = "", data) {
     return {
-      status: 'success',
+      status: "success",
       message,
       data,
-    }
+    };
   }
 
-  static errorRes(message, errorStatus = 'error') {
-    return { status: errorStatus, message }
+  static errorRes(message, errorStatus = "error") {
+    return { status: errorStatus, message };
   }
 
-  static conflictRes(message, errorStatus = 'conflict') {
-    return { status: errorStatus, message }
+  static conflictRes(message, errorStatus = "conflict") {
+    return { status: errorStatus, message };
   }
 
   static calcTimeDifference(date1, date2) {
-    const startTime = new Date(date1)
-    const endTime = new Date(date2)
-    return endTime.getTime() - startTime.getTime()
+    const startTime = new Date(date1);
+    const endTime = new Date(date2);
+    return endTime.getTime() - startTime.getTime();
   }
 
   static capitalizeString(str) {
-    if (!str) return null
-    const trimmedStr = str.trim()
-    const normalizedStr = trimmedStr.replace(/\s{2,}/g, ' ')
-    const words = normalizedStr.split(' ')
+    if (!str) return null;
+    const trimmedStr = str.trim();
+    const normalizedStr = trimmedStr.replace(/\s{2,}/g, " ");
+    const words = normalizedStr.split(" ");
     const capitalizedWords = words.map((word) => {
-      const firstLetter = word.charAt(0).toUpperCase()
-      const restOfWord = word.slice(1).toLowerCase()
-      return firstLetter + restOfWord
-    })
-    return capitalizedWords.join(' ')
+      const firstLetter = word.charAt(0).toUpperCase();
+      const restOfWord = word.slice(1).toLowerCase();
+      return firstLetter + restOfWord;
+    });
+    return capitalizedWords.join(" ");
   }
 
   static saltRounds() {
-    return Math.round(Math.random() * 10)
+    return Math.round(Math.random() * 10);
   }
 
   static hashPassword(password) {
-    const saltRounds = this.saltRounds()
-    return bcrypt.hashSync(password, saltRounds)
+    const saltRounds = this.saltRounds();
+    return bcrypt.hashSync(password, saltRounds);
   }
 
   static generateUniqueIdAndKey() {
     const generateRandomString = (length, characters) => {
       return Array.from(crypto.randomFillSync(new Uint8Array(length)))
         .map((n) => characters[n % characters.length])
-        .join('');
+        .join("");
     };
 
-    const idLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    const idNumbers = '0123456789';
+    const idLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const idNumbers = "0123456789";
 
-    const keyCharacters = '0123456789';
+    const keyCharacters = "0123456789";
 
     const idLetterPart = generateRandomString(4, idLetters);
     const idNumberPart = generateRandomString(2, idNumbers);
@@ -74,6 +77,135 @@ class Utility {
     const accessKey = generateRandomString(7, keyCharacters);
 
     return { uniqueId, accessKey };
+  }
+
+  // excel
+
+  static async exportSlotsToExcel(doctorId) {
+    try {
+      // Fetch slots for the day
+      const slots = await slotModel
+        .find({
+          doctor: doctorId,
+          date: moment().format("DD/MM/YYYY"),
+        })
+        .select(
+          "tokenNo orderNumber patientName startingTime endingTime consultationTime"
+        )
+        .sort("orderNumber")
+        .lean();
+
+      // Fetch doctor's name
+      const doctor = await doctorModel.findById(doctorId).select("name").lean();
+
+      // Fetch doctor's presence for breaks
+      const presenceData = await doctorPresenceModel
+        .findOne({
+          doctor: doctorId,
+          date: moment().format("DD/MM/YYYY"),
+        })
+        .select("breaks")
+        .lean();
+
+      if (slots.length === 0) {
+        return { message: "No slots available for export." };
+      }
+
+      // Create a new Excel workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Doctor Slots");
+
+      // Define columns for the worksheet
+      worksheet.columns = [
+        { header: "Doctor", key: "name", width: 15 },
+        { header: "Token Number", key: "tokenNo", width: 15 },
+        { header: "Order Number", key: "orderNumber", width: 15 },
+        { header: "Patient Name", key: "patientName", width: 25 },
+        { header: "Starting Time", key: "startingTime", width: 20 },
+        { header: "Ending Time", key: "endingTime", width: 20 },
+        {
+          header: "Consultation Time (mins)",
+          key: "consultationTime",
+          width: 25,
+        },
+        { header: "Duration (mins)", key: "duration", width: 25 },
+        { header: "Break Start Time", key: "breakStart", width: 20 },
+        { header: "Break End Time", key: "breakEnd", width: 20 },
+      ];
+
+      // Add rows to the worksheet from the slot data
+      slots.forEach((slot, index) => {
+        // Parse current starting time
+        const currentStartTimeStr = slot.startingTime;
+        const currentStartTime = moment(currentStartTimeStr, "HH:mm:ss", true); // Change format to match your time format
+
+        // Calculate duration based on next slot's starting time
+        let duration = 0;
+        if (index < slots.length - 1) {
+          const nextStartTimeStr = slots[index + 1].startingTime;
+          const nextStartTime = moment(nextStartTimeStr, "HH:mm:ss", true); // Change format to match your time format
+
+          if (currentStartTime.isValid() && nextStartTime.isValid()) {
+            duration = nextStartTime.diff(currentStartTime, "minutes");
+          }
+        }
+
+        // Format duration into hours and minutes
+        let durationFormatted = `${duration} minute${
+          duration !== 1 ? "s" : ""
+        }`;
+        if (duration > 60) {
+          const hours = Math.floor(duration / 60);
+          const minutes = duration % 60;
+          durationFormatted = `${hours} hour${
+            hours !== 1 ? "s" : ""
+          } ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+        }
+
+        // Get the doctor's break times, if any
+        let breakStart = "N/A";
+        let breakEnd = "N/A";
+
+        if (presenceData && presenceData.breaks.length > 0) {
+          const lastBreak = presenceData.breaks[presenceData.breaks.length - 1];
+          breakStart = lastBreak.startTime || "N/A";
+          breakEnd = lastBreak.endTime || "N/A";
+        }
+
+        // Add the row to the worksheet
+        worksheet.addRow({
+          name: doctor.name,
+          tokenNo: slot.tokenNo,
+          orderNumber: slot.orderNumber,
+          patientName: slot.patientName || "N/A",
+          startingTime: slot.startingTime || "N/A",
+          consultationTime: slot.consultationTime || 0,
+          duration: durationFormatted,
+          breakStart: breakStart,
+          breakEnd: breakEnd,
+          endingTime: slot.endingTime || "N/A",
+        });
+      });
+
+      // Generate file name based on doctor's name and the current date
+      const fileName = `${doctor.name.replace(
+        /\s+/g,
+        "-"
+      )}-slots-${moment().format("DD-MM-YYYY")}.xlsx`;
+      const filePath = path.join(__dirname, "exports", fileName);
+
+      // Ensure the directory exists
+      if (!fs.existsSync(path.join(__dirname, "exports"))) {
+        fs.mkdirSync(path.join(__dirname, "exports"));
+      }
+
+      // Save the workbook to the file system
+      await workbook.xlsx.writeFile(filePath);
+
+      return { message: "Slots successfully exported to Excel.", filePath };
+    } catch (error) {
+      throw new Error(`Error exporting slots to Excel: ${error.message}`);
+    }
   }
 
   // static async upcomingTokens(doctorId) {
@@ -140,325 +272,335 @@ class Utility {
   //   }
   // }
 
-
   static async upcomingTokens(doctorId) {
     try {
       const doctor = await doctorModel.findById(doctorId);
-  
+
       const presenceData = await doctorPresenceModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
+        date: moment().format("DD/MM/YYYY"),
         doctor: doctorId,
       });
-  
+
       // Fetch current token to get its expected end time
-      const currentToken = await slotModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
-        doctor: doctorId,
-        fileArrive: true,
-        startingTime: { $exists: true, $ne: "" },
-        $or: [
-          { endingTime: { $exists: false } },
-          { endingTime: '' },
-        ]
-      })
-      .sort('orderNumber') // Assuming tokens are ordered by orderNumber
-      .lean();
-  
+      const currentToken = await slotModel
+        .findOne({
+          date: moment().format("DD/MM/YYYY"),
+          doctor: doctorId,
+          fileArrive: true,
+          startingTime: { $exists: true, $ne: "" },
+          $or: [{ endingTime: { $exists: false } }, { endingTime: "" }],
+        })
+        .sort("orderNumber") // Assuming tokens are ordered by orderNumber
+        .lean();
+
       // Calculate the current time for determining the start time for upcoming tokens
       let currentTime;
-  
+
       if (!presenceData) {
-        currentTime = moment.max(moment(), moment(doctor.workingHoursStarting, 'HH:mm'));
+        currentTime = moment.max(
+          moment(),
+          moment(doctor.workingHoursStarting, "HH:mm")
+        );
       } else {
-        if (presenceData.outTime) { return []; }
+        if (presenceData.outTime) {
+          return [];
+        }
         const lastBreak = presenceData.breaks[presenceData.breaks.length - 1];
-  
+
         if (lastBreak && !lastBreak.endTime) {
-          const breakEndTime = moment(lastBreak.startTime, 'HH:mm:ss').add(lastBreak.estimatedTime, 'minutes');
+          const breakEndTime = moment(lastBreak.startTime, "HH:mm:ss").add(
+            lastBreak.estimatedTime,
+            "minutes"
+          );
           currentTime = moment.max(moment(), breakEndTime);
         } else {
           currentTime = moment();
         }
       }
-  
+
       // Initialize the accumulated time for upcoming tokens
       let accumulatedTime = 0;
-  
+
       // If there is a current token, use its expected end time as the starting point
       if (currentToken) {
         const currentConsultationTime = currentToken.consultationTime || 0; // Get consultation time from current token
         const expectedEndTime = moment(currentTime)
-          .add(currentConsultationTime, 'minutes') // Calculate expected end time
-          .format('HH:mm'); // Format to HH:mm for further calculations
-  
+          .add(currentConsultationTime, "minutes") // Calculate expected end time
+          .format("HH:mm"); // Format to HH:mm for further calculations
+
         // Set the current time to the expected end time for upcoming tokens
-        currentTime = moment(expectedEndTime, 'HH:mm');
+        currentTime = moment(expectedEndTime, "HH:mm");
       }
-  
-      const slots = await slotModel.find({
-        date: moment().format('DD/MM/YYYY'),
-        doctor: doctorId,
-        fileArrive: true,
-        $or: [
-          { startingTime: { $exists: false } },
-          { startingTime: { $eq: '' } },
-        ],
-      })
-      .select('tokenNo orderNumber consultationTime') // Ensure consultationTime is included
-      .sort('orderNumber')
-      .lean();
-  
+
+      const slots = await slotModel
+        .find({
+          date: moment().format("DD/MM/YYYY"),
+          doctor: doctorId,
+          fileArrive: true,
+          $or: [
+            { startingTime: { $exists: false } },
+            { startingTime: { $eq: "" } },
+          ],
+        })
+        .select("tokenNo orderNumber consultationTime") // Ensure consultationTime is included
+        .sort("orderNumber")
+        .lean();
+
       // Process each slot to calculate expected times
       const slotsWithTime = slots.map((slot) => {
         const consultationTime = slot.consultationTime || 0; // Get consultation time from the slot
-  
+
         // Calculate expected start time for the current token based on the current time and accumulated consultation time
-        const expectedStartTime = moment(currentTime).add(accumulatedTime, 'minutes');
-  
+        const expectedStartTime = moment(currentTime).add(
+          accumulatedTime,
+          "minutes"
+        );
+
         // Calculate expected end time based on the consultation time of the current token
-        const expectedEndTime = moment(expectedStartTime).add(consultationTime, 'minutes');
-  
+        const expectedEndTime = moment(expectedStartTime).add(
+          consultationTime,
+          "minutes"
+        );
+
         // Update accumulatedTime for the next iteration
         accumulatedTime += consultationTime;
-  
+
         return {
           ...slot,
-          expectedTime: expectedStartTime.format('hh:mm A'), // Start time for the token
-          expectedEndTime: expectedEndTime.format('hh:mm A'), // End time for the token
+          expectedTime: expectedStartTime.format("hh:mm A"), // Start time for the token
+          expectedEndTime: expectedEndTime.format("hh:mm A"), // End time for the token
         };
       });
-  
+
       return slotsWithTime;
-  
     } catch (error) {
       throw error;
     }
   }
-  
-  
 
   static async tokensOfDoctor(doctorId) {
     try {
-      const slots = await slotModel.find({
-        doctor: doctorId,
-        date: moment().format('DD/MM/YYYY')
-      }).sort('orderNumber')
-        .select('tokenNo orderNumber fileArrive startingTime endingTime')
-        .lean()
+      const slots = await slotModel
+        .find({
+          doctor: doctorId,
+          date: moment().format("DD/MM/YYYY"),
+        })
+        .sort("orderNumber")
+        .select("tokenNo orderNumber fileArrive startingTime endingTime")
+        .lean();
 
-      return slots
+      return slots;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
-//   static async currentToken(doctorId) {
-//     try {
-//       const token = await slotModel.findOne({
-//         date: moment().format('DD/MM/YYYY'),
-//         doctor: doctorId,
-//         startingTime: { $exists: true, $ne: "" },
-//         $or: [
-//           {
-//             endingTime: { $exists: false }
-//           },
-//           {
-//             endingTime: ''
-//           },
-//         ]
-//       }).select('tokenNo consultationTime startingTime').lean()
-// console.log(token.tokenNo);
+  //   static async currentToken(doctorId) {
+  //     try {
+  //       const token = await slotModel.findOne({
+  //         date: moment().format('DD/MM/YYYY'),
+  //         doctor: doctorId,
+  //         startingTime: { $exists: true, $ne: "" },
+  //         $or: [
+  //           {
+  //             endingTime: { $exists: false }
+  //           },
+  //           {
+  //             endingTime: ''
+  //           },
+  //         ]
+  //       }).select('tokenNo consultationTime startingTime').lean()
+  // console.log(token.tokenNo);
 
-//       if (!token) return null
-//       const tokenNo = token.tokenNo
-     
-//       return tokenNo
-      
-//     } catch (error) {
-//       throw error
-//     }
-//   }
+  //       if (!token) return null
+  //       const tokenNo = token.tokenNo
 
+  //       return tokenNo
 
-static async currentToken(doctorId, additionalTime = 0) {
-  try {
-    // Fetch the current token with consultation time
-    const token = await slotModel.findOne({
-      date: moment().format('DD/MM/YYYY'),
-      doctor: doctorId,
-      startingTime: { $exists: true, $ne: "" },
-      $or: [
-        { endingTime: { $exists: false } },
-        { endingTime: '' },
-      ]
-    }).select('tokenNo consultationTime startingTime').lean();
+  //     } catch (error) {
+  //       throw error
+  //     }
+  //   }
 
-    if (!token) return null;
+  static async currentToken(doctorId, additionalTime = 0) {
+    try {
+      // Fetch the current token with consultation time
+      const token = await slotModel
+        .findOne({
+          date: moment().format("DD/MM/YYYY"),
+          doctor: doctorId,
+          startingTime: { $exists: true, $ne: "" },
+          $or: [{ endingTime: { $exists: false } }, { endingTime: "" }],
+        })
+        .select("tokenNo consultationTime startingTime")
+        .lean();
 
-    // Log values for debugging
-    console.log('Current Consultation Time:', token.consultationTime);
-    console.log('Additional Time:', additionalTime);
+      if (!token) return null;
 
-    // Ensure consultationTime defaults to 0 if not a valid number
-    const existingConsultationTime = token.consultationTime || 0;
-    const updatedConsultationTime = existingConsultationTime + additionalTime;
+      // Ensure consultationTime defaults to 0 if not a valid number
+      const existingConsultationTime = token.consultationTime || 0;
+      const updatedConsultationTime = existingConsultationTime + additionalTime;
 
-    // Log updated consultation time for debugging
-    console.log('Updated Consultation Time:', updatedConsultationTime);
+      // Update the database with the new consultation time
+      await slotModel.updateOne(
+        { _id: token._id }, // Find the token by its ID
+        { consultationTime: updatedConsultationTime } // Update consultationTime
+      );
 
-    // Update the database with the new consultation time
-    await slotModel.updateOne(
-      { _id: token._id }, // Find the token by its ID
-      { consultationTime: updatedConsultationTime } // Update consultationTime
-    );
+      // Calculate expected end time based on the updated consultation time
+      const expectedEndTime = moment(token.startingTime, "HH:mm:ss")
+        .add(updatedConsultationTime, "minutes")
+        .format("hh:mm A");
 
-    // Calculate expected end time based on the updated consultation time
-    const expectedEndTime = moment(token.startingTime, 'HH:mm:ss')
-      .add(updatedConsultationTime, 'minutes')
-      .format('hh:mm A');
-
-    return {
-      tokenNo: token.tokenNo,
-      consultationTime: updatedConsultationTime,
-      expectedEndTime: expectedEndTime
-    };
-  } catch (error) {
-    console.error("Error in currentToken:", error);
-    throw error; // Rethrow the error for further handling
+      return {
+        tokenNo: token.tokenNo,
+        consultationTime: updatedConsultationTime,
+        expectedEndTime: expectedEndTime,
+      };
+    } catch (error) {
+      console.error("Error in currentToken:", error);
+      throw error; // Rethrow the error for further handling
+    }
   }
-}
-
-
-
 
   static async doctorPresenceStatus(doctorId) {
     try {
       const presenceData = await doctorPresenceModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
+        date: moment().format("DD/MM/YYYY"),
         doctor: doctorId,
-      })
+      });
 
       if (!presenceData) {
-        return 'didn\'t reached yet'
+        return "didn't reached yet";
       } else if (presenceData.outTime) {
-        return 'consultation completed'
+        return "consultation completed";
       } else if (presenceData.breaks.length) {
         if (!presenceData.breaks[presenceData.breaks.length - 1].endTime) {
-          return 'in break'
+          return "in break";
         } else {
-          return 'live'
+          return "live";
         }
-      } else return 'live'
+      } else return "live";
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   static async doctorIn(doctorId) {
     try {
       const alreadyExist = await doctorPresenceModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
+        date: moment().format("DD/MM/YYYY"),
         doctor: doctorId,
-      })
+      });
       if (alreadyExist) {
         if (alreadyExist.outTime) {
-          throw 'cosnultation completed'
+          throw "cosnultation completed";
         }
-        throw 'already in'
+        throw "already in";
       }
 
       const res = await doctorPresenceModel.insertMany({
-        date: moment().format('DD/MM/YYYY'),
+        date: moment().format("DD/MM/YYYY"),
         doctor: doctorId,
-        inTime: moment().format('hh:mm:ss'),
-        isActive:true
-      })
+        inTime: moment().format("hh:mm:ss"),
+        isActive: true,
+      });
 
       await doctorModel.updateOne({ _id: doctorId }, { tokenStatus: true });
-      return res
+      return res;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   static async doctorClockOut(doctorId) {
     try {
       const alreadyExist = await doctorPresenceModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
+        date: moment().format("DD/MM/YYYY"),
         doctor: doctorId,
-      })
-      if (!alreadyExist) throw 'didn\'t arrive yet'
-      if (alreadyExist.outTime) throw 'already clock out'
-      if (alreadyExist.breaks.length &&
-        alreadyExist.breaks[alreadyExist.breaks.length - 1].endTime) {
-        await this.endBreak(doctorId)
+      });
+      if (!alreadyExist) throw "didn't arrive yet";
+      if (alreadyExist.outTime) throw "already clock out";
+      if (
+        alreadyExist.breaks.length &&
+        alreadyExist.breaks[alreadyExist.breaks.length - 1].endTime
+      ) {
+        await this.endBreak(doctorId);
       }
 
       const res = doctorPresenceModel.updateOne(
         {
-          date: moment().format('DD/MM/YYYY'),
+          date: moment().format("DD/MM/YYYY"),
           doctor: doctorId,
         },
         {
-          outTime: moment().format('hh:mm:ss'),
-          
-        })
+          outTime: moment().format("hh:mm:ss"),
+        }
+      );
 
-        // Update the tokenStatus to false (doctor is not available)
-    await doctorModel.updateOne({ _id: doctorId }, { tokenStatus: false });
-      return res
+      // Update the tokenStatus to false (doctor is not available)
+      await doctorModel.updateOne({ _id: doctorId }, { tokenStatus: false });
+      return res;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   static async takeBreak({ doctorId, estimatedTime = 10, reason }) {
     try {
       const alreadyExist = await doctorPresenceModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
+        date: moment().format("DD/MM/YYYY"),
         doctor: doctorId,
-      })
-      if (!alreadyExist) throw 'didn\'t arrive yet'
-      if (alreadyExist.outTime) throw 'completed consultation'
-      if (alreadyExist.breaks.length &&
-        !alreadyExist.breaks[alreadyExist.breaks.length - 1].endTime) {
-        return 'already in break'
+      });
+      if (!alreadyExist) throw "didn't arrive yet";
+      if (alreadyExist.outTime) throw "completed consultation";
+      if (
+        alreadyExist.breaks.length &&
+        !alreadyExist.breaks[alreadyExist.breaks.length - 1].endTime
+      ) {
+        return "already in break";
       }
 
-      const res = await doctorPresenceModel.updateOne({
-        date: moment().format('DD/MM/YYYY'),
-        doctor: doctorId,
-      }, {
-        $push: {
-          breaks: {
-            startTime: moment().format('HH:mm:ss'),
-            estimatedTime,
-            reason: reason ? reason : null
-          }
+      const res = await doctorPresenceModel.updateOne(
+        {
+          date: moment().format("DD/MM/YYYY"),
+          doctor: doctorId,
+        },
+        {
+          $push: {
+            breaks: {
+              startTime: moment().format("HH:mm:ss"),
+              estimatedTime,
+              reason: reason ? reason : null,
+            },
+          },
         }
-      })
-      return res
+      );
+      return res;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   static async returnToWork(doctorId) {
     try {
       const alreadyExist = await doctorPresenceModel.findOne({
-        date: moment().format('DD/MM/YYYY'),
+        date: moment().format("DD/MM/YYYY"),
         doctor: doctorId,
-      })
-      if (!alreadyExist) throw 'didn\'t arrive yet'
-      if (alreadyExist.outTime) throw 'completed consultation'
-      if (!alreadyExist.breaks.length || alreadyExist.breaks[alreadyExist.breaks.length - 1].endTime) {
-        throw 'you are not in break now'
+      });
+      if (!alreadyExist) throw "didn't arrive yet";
+      if (alreadyExist.outTime) throw "completed consultation";
+      if (
+        !alreadyExist.breaks.length ||
+        alreadyExist.breaks[alreadyExist.breaks.length - 1].endTime
+      ) {
+        throw "you are not in break now";
       }
 
-      const res = await this.endBreak(doctorId)
-      return res
+      const res = await this.endBreak(doctorId);
+      return res;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
@@ -466,7 +608,7 @@ static async currentToken(doctorId, additionalTime = 0) {
     try {
       const res = await doctorPresenceModel.updateOne(
         {
-          date: moment().format('DD/MM/YYYY'),
+          date: moment().format("DD/MM/YYYY"),
           doctor: doctorId,
         },
         [
@@ -478,9 +620,9 @@ static async currentToken(doctorId, additionalTime = 0) {
                     $range: [
                       0,
                       {
-                        $size: "$breaks"
-                      }
-                    ]
+                        $size: "$breaks",
+                      },
+                    ],
                   },
                   as: "index",
                   in: {
@@ -491,58 +633,52 @@ static async currentToken(doctorId, additionalTime = 0) {
                           {
                             $subtract: [
                               {
-                                $size: "$breaks"
+                                $size: "$breaks",
                               },
-                              1
-                            ]
-                          }
-                        ]
+                              1,
+                            ],
+                          },
+                        ],
                       },
                       {
                         $mergeObjects: [
                           {
-                            $arrayElemAt: [
-                              "$breaks",
-                              "$$index"
-                            ]
+                            $arrayElemAt: ["$breaks", "$$index"],
                           },
                           {
-                            endTime: moment().format('HH:mm:ss')
-                          }
-
-                        ]
+                            endTime: moment().format("HH:mm:ss"),
+                          },
+                        ],
                       },
                       {
-                        $arrayElemAt: [
-                          "$breaks",
-                          "$$index"
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          }
-        ])
-      return res
+                        $arrayElemAt: ["$breaks", "$$index"],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        ]
+      );
+      return res;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   static async changeOrder(doctorId, tokenNo, newOrder) {
     try {
-      const session = await mongoose.startSession()
-      session.startTransaction()
+      const session = await mongoose.startSession();
+      session.startTransaction();
 
       const tokenToMove = await slotModel.findOne({
         tokenNo,
-        date: moment().format('DD/MM/YYYY'),
-        doctor: doctorId
-      })
+        date: moment().format("DD/MM/YYYY"),
+        doctor: doctorId,
+      });
 
-      if (!tokenToMove) throw 'token not found'
+      if (!tokenToMove) throw "token not found";
 
       const oldOrder = tokenToMove.orderNumber;
 
@@ -566,9 +702,9 @@ static async currentToken(doctorId, additionalTime = 0) {
       await tokenToMove.save({ session });
 
       await session.commitTransaction();
-      return 'updated'
+      return "updated";
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
@@ -576,48 +712,51 @@ static async currentToken(doctorId, additionalTime = 0) {
     try {
       const alreadyExist = await slotModel.findOne({
         doctor: doctorId,
-        date: moment().format('DD/MM/YYYY'),
-      })
+        date: moment().format("DD/MM/YYYY"),
+      });
 
-      if (alreadyExist) return null
+      if (alreadyExist) return null;
 
-      const doctor = await doctorModel.findOne({
-        _id: doctorId,
-        totalTokensPerDay: {
-          $exists: true,
-          $ne: ''
-        }
-      }).select('totalTokensPerDay')
+      const doctor = await doctorModel
+        .findOne({
+          _id: doctorId,
+          totalTokensPerDay: {
+            $exists: true,
+            $ne: "",
+          },
+        })
+        .select("totalTokensPerDay");
 
-      if (!doctor) return null
+      if (!doctor) return null;
 
-      const tokens = []
+      const tokens = [];
 
       for (let i = 1; i <= doctor.totalTokensPerDay; i++) {
         tokens.push({
           tokenNo: i,
           doctor: doctor._id,
-          date: moment().format('DD/MM/YYYY'),
+          date: moment().format("DD/MM/YYYY"),
           orderNumber: i,
-        })
+        });
       }
 
-      const res = await slotModel.insertMany(tokens)
-      return res
+      const res = await slotModel.insertMany(tokens);
+      return res;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
 
   static async generateQRImage(doctorId) {
     try {
-      const url = await QRCode.toDataURL(JSON.stringify({ doctorId, platform: 'vyzo' }))
-      return url
+      const url = await QRCode.toDataURL(
+        JSON.stringify({ doctorId, platform: "vyzo" })
+      );
+      return url;
     } catch (error) {
-      throw error
+      throw error;
     }
   }
-
 }
 
-module.exports = Utility
+module.exports = Utility;
