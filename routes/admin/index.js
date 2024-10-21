@@ -6,6 +6,8 @@ router.post('/doctor', doctorController.createDoctor)
   .get('/doctor/count', doctorController.getDoctorCount)
   .put('/doctor/:id', doctorController.editDoctor)
   .delete('/doctor/:id', doctorController.deleteDoctor)
+  .get("/doctor/reports/:id", doctorController.excel)
+
 
 
 module.exports = router

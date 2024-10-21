@@ -105,10 +105,41 @@ const getDoctorCount = async (req, res) => {
   }
 }
 
+
+const excel = async(req, res) => {
+  try {
+    const doctorId = req.params.id;
+    console.log(doctorId);
+
+    // Extract doctorId from request and export slots to Excel
+    const result = await utility.exportSlotsToExcel(doctorId);
+
+    // If filePath exists, download the Excel file
+    if (result.filePath) {
+      res.download(result.filePath, (err) => {
+        if (err) {
+          res.status(500).send('Error downloading the file.');
+        }
+      });
+    } 
+    // If there are no slots or an issue, return the message
+    else if (result.message) {
+      res.status(404).send(result.message); // Return the message when no slots are available
+    } else {
+      res.status(404).send('No data available to generate the Excel file.');
+    }
+
+  } catch (error) {
+    res.status(500).send(`Server error: ${error.message}`);
+  }
+}
+
+
 module.exports = {
   createDoctor,
   getDoctors,
   editDoctor,
   deleteDoctor,
   getDoctorCount,
+  excel
 }

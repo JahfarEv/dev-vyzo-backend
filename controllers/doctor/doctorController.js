@@ -118,25 +118,25 @@ console.log(consultationTime);
 
 //excel
 
-const excel = async(req,res)=>{
-  try {
-    const { doctorId } = req.doctorData; 
-    console.log(doctorId);
-    // Extract doctorId from request
-    const result = await utility.exportSlotsToExcel(doctorId);
-    if (result.filePath) {
-      res.download(result.filePath, (err) => {
-        if (err) {
-          res.status(500).send('Error downloading the file.');
-        }
-      });
-    } else {
-      res.status(404).send(result.message);
-    }
-  } catch (error) {
-    res.status(500).send(`Server error: ${error.message}`);
-  }
-}
+// const excel = async(req,res)=>{
+//   try {
+//     const { doctorId } = req.doctorData; 
+//     console.log(doctorId);
+//     // Extract doctorId from request
+//     const result = await utility.exportSlotsToExcel(doctorId);
+//     if (result.filePath) {
+//       res.download(result.filePath, (err) => {
+//         if (err) {
+//           res.status(500).send('Error downloading the file.');
+//         }
+//       });
+//     } else {
+//       res.status(404).send(result.message);
+//     }
+//   } catch (error) {
+//     res.status(500).send(`Server error: ${error.message}`);
+//   }
+// }
 
 
 //test
@@ -376,5 +376,4 @@ module.exports = {
   // updateTokenConsultationTime,
   getCurrentTokenWithTime,
   savePatientDetails,
-  excel
 };

@@ -7,6 +7,6 @@ router
   .get("/profile", doctorController.doctorDetails)
   .put("/current-token", doctorController.getCurrentTokenWithTime)
   .post("/save-patient", doctorController.savePatientDetails)
-  .get("/export-slots", doctorController.excel)
+  // .get("/export-slots", doctorController.excel)
 
 module.exports = router;

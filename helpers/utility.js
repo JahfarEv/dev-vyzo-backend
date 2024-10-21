@@ -94,10 +94,13 @@ class Utility {
         )
         .sort("orderNumber")
         .lean();
-
+  
       // Fetch doctor's name
       const doctor = await doctorModel.findById(doctorId).select("name").lean();
-
+  if(!slots){
+    console.log("slot is not available");
+    
+  }
       // Fetch doctor's presence for breaks
       const presenceData = await doctorPresenceModel
         .findOne({
@@ -106,15 +109,15 @@ class Utility {
         })
         .select("breaks")
         .lean();
-
+  
       if (slots.length === 0) {
         return { message: "No slots available for export." };
       }
-
+  
       // Create a new Excel workbook and worksheet
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("Doctor Slots");
-
+  
       // Define columns for the worksheet
       worksheet.columns = [
         { header: "Doctor", key: "name", width: 15 },
@@ -122,56 +125,49 @@ class Utility {
         { header: "Order Number", key: "orderNumber", width: 15 },
         { header: "Patient Name", key: "patientName", width: 25 },
         { header: "Starting Time", key: "startingTime", width: 20 },
-        { header: "Ending Time", key: "endingTime", width: 20 },
-        {
-          header: "Consultation Time (mins)",
-          key: "consultationTime",
-          width: 25,
-        },
+        // { header: "Ending Time", key: "endingTime", width: 20 },
+        { header: "Consultation Time (mins)", key: "consultationTime", width: 25 },
         { header: "Duration (mins)", key: "duration", width: 25 },
-        { header: "Break Start Time", key: "breakStart", width: 20 },
-        { header: "Break End Time", key: "breakEnd", width: 20 },
+        { header: "Break Times", key: "breaks", width: 30 },
       ];
-
+  
       // Add rows to the worksheet from the slot data
       slots.forEach((slot, index) => {
         // Parse current starting time
         const currentStartTimeStr = slot.startingTime;
-        const currentStartTime = moment(currentStartTimeStr, "HH:mm:ss", true); // Change format to match your time format
-
+        const currentStartTime = moment(currentStartTimeStr, "HH:mm:ss A", true); // Change format to match your time format
+  
         // Calculate duration based on next slot's starting time
         let duration = 0;
         if (index < slots.length - 1) {
           const nextStartTimeStr = slots[index + 1].startingTime;
-          const nextStartTime = moment(nextStartTimeStr, "HH:mm:ss", true); // Change format to match your time format
-
+          const nextStartTime = moment(nextStartTimeStr, "HH:mm:ss A", true); // Change format to match your time format
+  
           if (currentStartTime.isValid() && nextStartTime.isValid()) {
             duration = nextStartTime.diff(currentStartTime, "minutes");
           }
         }
-
+  
         // Format duration into hours and minutes
-        let durationFormatted = `${duration} minute${
-          duration !== 1 ? "s" : ""
-        }`;
+        let durationFormatted = `${duration} minute${duration !== 1 ? "s" : ""}`;
         if (duration > 60) {
           const hours = Math.floor(duration / 60);
           const minutes = duration % 60;
-          durationFormatted = `${hours} hour${
-            hours !== 1 ? "s" : ""
-          } ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+          durationFormatted = `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
         }
-
-        // Get the doctor's break times, if any
-        let breakStart = "N/A";
-        let breakEnd = "N/A";
-
+  
+        // Get all the doctor's break times
+        let breaksFormatted = "N/A";
         if (presenceData && presenceData.breaks.length > 0) {
-          const lastBreak = presenceData.breaks[presenceData.breaks.length - 1];
-          breakStart = lastBreak.startTime || "N/A";
-          breakEnd = lastBreak.endTime || "N/A";
+          breaksFormatted = presenceData.breaks
+            .map((breakData, i) => {
+              const start = breakData.startTime ? breakData.startTime : "N/A";
+              const end = breakData.endTime ? breakData.endTime : "N/A";
+              return ` ${start} - ${end}`;
+            })
+            .join(", ");
         }
-
+  
         // Add the row to the worksheet
         worksheet.addRow({
           name: doctor.name,
@@ -181,32 +177,29 @@ class Utility {
           startingTime: slot.startingTime || "N/A",
           consultationTime: slot.consultationTime || 0,
           duration: durationFormatted,
-          breakStart: breakStart,
-          breakEnd: breakEnd,
-          endingTime: slot.endingTime || "N/A",
+          // endingTime: slot.endingTime || "N/A",
+          breaks: breaksFormatted,
         });
       });
-
+  
       // Generate file name based on doctor's name and the current date
-      const fileName = `${doctor.name.replace(
-        /\s+/g,
-        "-"
-      )}-slots-${moment().format("DD-MM-YYYY")}.xlsx`;
+      const fileName = `${doctor.name.replace(/\s+/g, "-")}-slots-${moment().format("DD-MM-YYYY")}.xlsx`;
       const filePath = path.join(__dirname, "exports", fileName);
-
+  
       // Ensure the directory exists
       if (!fs.existsSync(path.join(__dirname, "exports"))) {
         fs.mkdirSync(path.join(__dirname, "exports"));
       }
-
+  
       // Save the workbook to the file system
       await workbook.xlsx.writeFile(filePath);
-
+  
       return { message: "Slots successfully exported to Excel.", filePath };
     } catch (error) {
       throw new Error(`Error exporting slots to Excel: ${error.message}`);
     }
   }
+  
 
   // static async upcomingTokens(doctorId) {
   //   try {
@@ -569,7 +562,7 @@ class Utility {
         {
           $push: {
             breaks: {
-              startTime: moment().format("HH:mm:ss"),
+              startTime: moment().format("HH:mm:ss A"),
               estimatedTime,
               reason: reason ? reason : null,
             },
@@ -646,7 +639,7 @@ class Utility {
                             $arrayElemAt: ["$breaks", "$$index"],
                           },
                           {
-                            endTime: moment().format("HH:mm:ss"),
+                            endTime: moment().format("HH:mm:ss A"),
                           },
                         ],
                       },
