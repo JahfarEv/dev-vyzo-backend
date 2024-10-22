@@ -20,6 +20,7 @@ const patientSchema = new mongoose.Schema({
     ref: "Doctors", // Reference to Doctor model
     required: true,
   },
+  tokenNo: { type: Number, required: true }, // Add tokenNo field
   createdAt: {
     type: Date,
     default: Date.now,

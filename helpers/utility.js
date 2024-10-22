@@ -10,7 +10,9 @@ var QRCode = require("qrcode");
 const ExcelJS = require("exceljs");
 const fs = require("fs");
 const path = require("path");
-const { log } = require("console");
+const SlotDataModel = require('../models/dailyReport'); // Adjust the path as necessary
+const DailyReportModel = require("../models/dailyReport");
+const DoctorPresence = require('../models/doctorPresence'); // Import DoctorPresence model
 
 class Utility {
   // eslint-disable-next-line default-param-last
@@ -79,126 +81,326 @@ class Utility {
     return { uniqueId, accessKey };
   }
 
-  // excel
+  //daily report
 
-  static async exportSlotsToExcel(doctorId) {
-    try {
-      // Fetch slots for the day
-      const slots = await slotModel
-        .find({
-          doctor: doctorId,
-          date: moment().format("DD/MM/YYYY"),
-        })
-        .select(
-          "tokenNo orderNumber patientName startingTime endingTime consultationTime"
-        )
-        .sort("orderNumber")
-        .lean();
+  // static async saveSlotsToDailyReport (){
+  //   try {
+  //     // Fetch all slots for the current day from slotModel
+  //     const currentDate = moment().format('DD/MM/YYYY'); // Modify date format as needed
   
-      // Fetch doctor's name
-      const doctor = await doctorModel.findById(doctorId).select("name").lean();
-  if(!slots){
-    console.log("slot is not available");
-    
-  }
-      // Fetch doctor's presence for breaks
-      const presenceData = await doctorPresenceModel
-        .findOne({
-          doctor: doctorId,
-          date: moment().format("DD/MM/YYYY"),
-        })
-        .select("breaks")
-        .lean();
+  //     const slots = await slotModel
+  //       .find({ date: currentDate }) // Only fetch slots for the current day
+  //       .lean(); // Get plain JavaScript objects
+  
+  //     if (slots.length === 0) {
+  //       console.log('No slots available for today.');
+  //       return;
+  //     }
+  
+  //     // Save each slot data to dailyReportModel
+  //     for (const slot of slots) {
+  //       const dailyReport = new DailyReportModel({
+  //         doctor: slot.doctor,
+  //         tokenNo: slot.tokenNo,
+  //         orderNumber: slot.orderNumber,
+  //         consultationTime: slot.consultationTime,
+  //         tokenStatus: slot.tokenStatus,
+  //         startingTime: slot.startingTime,
+  //         endingTime: slot.endingTime,
+  //         fileArrive: slot.fileArrive,
+  //         date: slot.date, // Save the current date
+  //         createdAt: slot.createdAt, // Save original createdAt from slotModel
+  //         updatedAt: slot.updatedAt, // Save original updatedAt from slotModel
+  //       });
+  
+  //       await dailyReport.save(); // Save to dailyReportModel
+  //     }
+  
+  //     console.log('Slots successfully saved to daily report.');
+  //   } catch (error) {
+  //     console.error('Error saving slots to daily report:', error.message);
+  //   }
+  // };
+
+
+  
+  
+  static async saveSlotsToDailyReport () {
+    try {
+      // Fetch the current date in DD/MM/YYYY format
+      const currentDate = moment().format('DD/MM/YYYY');
+  
+      // Fetch all slots for the current day from SlotModel
+      const slots = await slotModel
+        .find({ date: currentDate }) // Only fetch slots for the current day
+        .lean(); // Get plain JavaScript objects
   
       if (slots.length === 0) {
-        return { message: "No slots available for export." };
+        console.log('No slots available for today.');
+        return;
       }
   
-      // Create a new Excel workbook and worksheet
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet("Doctor Slots");
+      // Fetch all doctor presence data for the current day
+      const doctorPresenceData = await DoctorPresence
+        .find({ date: currentDate })
+        .lean(); // Get plain JavaScript objects
   
-      // Define columns for the worksheet
-      worksheet.columns = [
-        { header: "Doctor", key: "name", width: 15 },
-        { header: "Token Number", key: "tokenNo", width: 15 },
-        { header: "Order Number", key: "orderNumber", width: 15 },
-        { header: "Patient Name", key: "patientName", width: 25 },
-        { header: "Starting Time", key: "startingTime", width: 20 },
-        // { header: "Ending Time", key: "endingTime", width: 20 },
-        { header: "Consultation Time (mins)", key: "consultationTime", width: 25 },
-        { header: "Duration (mins)", key: "duration", width: 25 },
-        { header: "Break Times", key: "breaks", width: 30 },
-      ];
+      // Save each slot data along with doctor presence breaks to DailyReportModel
+      for (const slot of slots) {
+        // Find corresponding doctor presence by doctor ID and date
+        const doctorPresence = doctorPresenceData.find(dp => dp.doctor.equals(slot.doctor));
   
-      // Add rows to the worksheet from the slot data
-      slots.forEach((slot, index) => {
-        // Parse current starting time
-        const currentStartTimeStr = slot.startingTime;
-        const currentStartTime = moment(currentStartTimeStr, "HH:mm:ss A", true); // Change format to match your time format
+        // If doctor presence is found, extract the breaks
+        const breaks = doctorPresence ? doctorPresence.breaks : [];
   
-        // Calculate duration based on next slot's starting time
-        let duration = 0;
-        if (index < slots.length - 1) {
-          const nextStartTimeStr = slots[index + 1].startingTime;
-          const nextStartTime = moment(nextStartTimeStr, "HH:mm:ss A", true); // Change format to match your time format
-  
-          if (currentStartTime.isValid() && nextStartTime.isValid()) {
-            duration = nextStartTime.diff(currentStartTime, "minutes");
-          }
-        }
-  
-        // Format duration into hours and minutes
-        let durationFormatted = `${duration} minute${duration !== 1 ? "s" : ""}`;
-        if (duration > 60) {
-          const hours = Math.floor(duration / 60);
-          const minutes = duration % 60;
-          durationFormatted = `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
-        }
-  
-        // Get all the doctor's break times
-        let breaksFormatted = "N/A";
-        if (presenceData && presenceData.breaks.length > 0) {
-          breaksFormatted = presenceData.breaks
-            .map((breakData, i) => {
-              const start = breakData.startTime ? breakData.startTime : "N/A";
-              const end = breakData.endTime ? breakData.endTime : "N/A";
-              return ` ${start} - ${end}`;
-            })
-            .join(", ");
-        }
-  
-        // Add the row to the worksheet
-        worksheet.addRow({
-          name: doctor.name,
+        // Create a new daily report entry with slot and break data
+        const dailyReport = new DailyReportModel({
+          doctor: slot.doctor,
           tokenNo: slot.tokenNo,
           orderNumber: slot.orderNumber,
-          patientName: slot.patientName || "N/A",
-          startingTime: slot.startingTime || "N/A",
-          consultationTime: slot.consultationTime || 0,
-          duration: durationFormatted,
-          // endingTime: slot.endingTime || "N/A",
-          breaks: breaksFormatted,
+          consultationTime: slot.consultationTime,
+          tokenStatus: slot.tokenStatus,
+          startingTime: slot.startingTime,
+          endingTime: slot.endingTime,
+          fileArrive: slot.fileArrive,
+          date: slot.date, // Save the current date
+          createdAt: slot.createdAt, // Save original createdAt from SlotModel
+          updatedAt: slot.updatedAt, // Save original updatedAt from SlotModel
+  
+          // Include the breaks from DoctorPresence
+          breaks: breaks.map(breakInfo => ({
+            startTime: breakInfo.startTime,
+            endTime: breakInfo.endTime,
+            estimatedTime: breakInfo.estimatedTime,
+            reason: breakInfo.reason
+          }))
         });
-      });
   
-      // Generate file name based on doctor's name and the current date
-      const fileName = `${doctor.name.replace(/\s+/g, "-")}-slots-${moment().format("DD-MM-YYYY")}.xlsx`;
-      const filePath = path.join(__dirname, "exports", fileName);
-  
-      // Ensure the directory exists
-      if (!fs.existsSync(path.join(__dirname, "exports"))) {
-        fs.mkdirSync(path.join(__dirname, "exports"));
+        // Save to DailyReportModel
+        await dailyReport.save();
       }
   
-      // Save the workbook to the file system
-      await workbook.xlsx.writeFile(filePath);
-  
-      return { message: "Slots successfully exported to Excel.", filePath };
+      console.log('Slots and doctor presence breaks successfully saved to daily report.');
     } catch (error) {
-      throw new Error(`Error exporting slots to Excel: ${error.message}`);
+      console.error('Error saving slots to daily report:', error.message);
     }
-  }
+  };
+  
+
+
+  // static async saveSlotsToMongo(doctorId) {
+  //   try {
+  //     // Fetch slots for the day
+  //     const slots = await slotModel
+  //       .find({
+  //         doctor: doctorId,
+  //         // date: moment().format("DD/MM/YYYY"),
+  //       })
+  //       .select(
+  //         "tokenNo orderNumber patientName startingTime consultationTime"
+  //       )
+  //       .sort("orderNumber")
+  //       .lean();
+  
+  //     // Fetch doctor's name
+  //     const doctor = await doctorModel.findById(doctorId).select("name").lean();
+  
+  //     if (!slots || slots.length === 0) {
+  //       return { message: "No slots available for saving." };
+  //     }
+  
+  //     // Fetch doctor's presence for breaks
+  //     const presenceData = await doctorPresenceModel
+  //       .findOne({
+  //         doctor: doctorId,
+  //         // date: moment().format("DD/MM/YYYY"),
+  //       })
+  //       .select("breaks")
+  //       .lean();
+  
+  //     // Add slots data to the MongoDB collection
+  //     const slotDataPromises = slots.map(async (slot, index) => {
+  //       // Parse current starting time
+  //       const currentStartTimeStr = slot.startingTime;
+  //       const currentStartTime = moment(currentStartTimeStr, "HH:mm:ss A", true); 
+  
+  //       // Calculate duration based on next slot's starting time
+  //       let duration = 0;
+  //       if (index < slots.length - 1) {
+  //         const nextStartTimeStr = slots[index + 1].startingTime;
+  //         const nextStartTime = moment(nextStartTimeStr, "HH:mm:ss A", true); 
+  
+  //         if (currentStartTime.isValid() && nextStartTime.isValid()) {
+  //           duration = nextStartTime.diff(currentStartTime, "minutes");
+  //         }
+  //       }
+  
+  //       // Format duration into hours and minutes
+  //       let durationFormatted = `${duration} minute${duration !== 1 ? "s" : ""}`;
+  //       if (duration > 60) {
+  //         const hours = Math.floor(duration / 60);
+  //         const minutes = duration % 60;
+  //         durationFormatted = `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  //       }
+  
+  //       // Get all the doctor's break times
+  //       let breaksFormatted = "N/A";
+  //       if (presenceData && presenceData.breaks.length > 0) {
+  //         breaksFormatted = presenceData.breaks
+  //           .map((breakData) => {
+  //             const start = breakData.startTime ? breakData.startTime : "N/A";
+  //             const end = breakData.endTime ? breakData.endTime : "N/A";
+  //             return `${start} - ${end}`;
+  //           })
+  //           .join(", ");
+  //       }
+  
+  //       // Save each slot data to MongoDB
+  //       const slotData = new SlotDataModel({
+  //         doctorId:doctor._id,
+  //         doctorName: doctor.name,
+  //         tokenNo: slot.tokenNo,
+  //         orderNumber: slot.orderNumber,
+  //         patientName: slot.patientName || "N/A",
+  //         startingTime: slot.startingTime || "N/A",
+  //         consultationTime: slot.consultationTime || 0,
+  //         duration: durationFormatted,
+  //         breaks: breaksFormatted,
+  //       });
+  
+  //       await slotData.save();
+  //     });
+  
+  //     // Wait for all slot data to be saved
+  //     await Promise.all(slotDataPromises);
+  
+  //     return { message: "Slots successfully saved to MongoDB." };
+  //   } catch (error) {
+  //     throw new Error(`Error saving slots to MongoDB: ${error.message}`);
+  //   }
+  // }
+  
+
+  // excel
+
+  // static async exportSlotsToExcel(doctorId) {
+  //   try {
+  //     // Fetch slots for the day
+  //     const slots = await slotModel
+  //       .find({
+  //         doctor: doctorId,
+  //         date: moment().format("DD/MM/YYYY"),
+  //       })
+  //       .select(
+  //         "tokenNo orderNumber patientName startingTime endingTime consultationTime"
+  //       )
+  //       .sort("orderNumber")
+  //       .lean();
+  
+  //     // Fetch doctor's name
+  //     const doctor = await doctorModel.findById(doctorId).select("name").lean();
+  // if(!slots){
+  //   console.log("slot is not available");
+    
+  // }
+  //     // Fetch doctor's presence for breaks
+  //     const presenceData = await doctorPresenceModel
+  //       .findOne({
+  //         doctor: doctorId,
+  //         date: moment().format("DD/MM/YYYY"),
+  //       })
+  //       .select("breaks")
+  //       .lean();
+  
+  //     if (slots.length === 0) {
+  //       return { message: "No slots available for export." };
+  //     }
+  
+  //     // Create a new Excel workbook and worksheet
+  //     const workbook = new ExcelJS.Workbook();
+  //     const worksheet = workbook.addWorksheet("Doctor Slots");
+  
+  //     // Define columns for the worksheet
+  //     worksheet.columns = [
+  //       { header: "Doctor", key: "name", width: 15 },
+  //       { header: "Token Number", key: "tokenNo", width: 15 },
+  //       { header: "Order Number", key: "orderNumber", width: 15 },
+  //       { header: "Patient Name", key: "patientName", width: 25 },
+  //       { header: "Starting Time", key: "startingTime", width: 20 },
+  //       // { header: "Ending Time", key: "endingTime", width: 20 },
+  //       { header: "Consultation Time (mins)", key: "consultationTime", width: 25 },
+  //       { header: "Duration (mins)", key: "duration", width: 25 },
+  //       { header: "Break Times", key: "breaks", width: 30 },
+  //     ];
+  
+  //     // Add rows to the worksheet from the slot data
+  //     slots.forEach((slot, index) => {
+  //       // Parse current starting time
+  //       const currentStartTimeStr = slot.startingTime;
+  //       const currentStartTime = moment(currentStartTimeStr, "HH:mm:ss A", true); // Change format to match your time format
+  
+  //       // Calculate duration based on next slot's starting time
+  //       let duration = 0;
+  //       if (index < slots.length - 1) {
+  //         const nextStartTimeStr = slots[index + 1].startingTime;
+  //         const nextStartTime = moment(nextStartTimeStr, "HH:mm:ss A", true); // Change format to match your time format
+  
+  //         if (currentStartTime.isValid() && nextStartTime.isValid()) {
+  //           duration = nextStartTime.diff(currentStartTime, "minutes");
+  //         }
+  //       }
+  
+  //       // Format duration into hours and minutes
+  //       let durationFormatted = `${duration} minute${duration !== 1 ? "s" : ""}`;
+  //       if (duration > 60) {
+  //         const hours = Math.floor(duration / 60);
+  //         const minutes = duration % 60;
+  //         durationFormatted = `${hours} hour${hours !== 1 ? "s" : ""} ${minutes} minute${minutes !== 1 ? "s" : ""}`;
+  //       }
+  
+  //       // Get all the doctor's break times
+  //       let breaksFormatted = "N/A";
+  //       if (presenceData && presenceData.breaks.length > 0) {
+  //         breaksFormatted = presenceData.breaks
+  //           .map((breakData, i) => {
+  //             const start = breakData.startTime ? breakData.startTime : "N/A";
+  //             const end = breakData.endTime ? breakData.endTime : "N/A";
+  //             return ` ${start} - ${end}`;
+  //           })
+  //           .join(", ");
+  //       }
+  
+  //       // Add the row to the worksheet
+  //       worksheet.addRow({
+  //         name: doctor.name,
+  //         tokenNo: slot.tokenNo,
+  //         orderNumber: slot.orderNumber,
+  //         patientName: slot.patientName || "N/A",
+  //         startingTime: slot.startingTime || "N/A",
+  //         consultationTime: slot.consultationTime || 0,
+  //         duration: durationFormatted,
+  //         // endingTime: slot.endingTime || "N/A",
+  //         breaks: breaksFormatted,
+  //       });
+  //     });
+  
+  //     // Generate file name based on doctor's name and the current date
+  //     const fileName = `${doctor.name.replace(/\s+/g, "-")}-slots-${moment().format("DD-MM-YYYY")}.xlsx`;
+  //     const filePath = path.join(__dirname, "exports", fileName);
+  
+  //     // Ensure the directory exists
+  //     if (!fs.existsSync(path.join(__dirname, "exports"))) {
+  //       fs.mkdirSync(path.join(__dirname, "exports"));
+  //     }
+  
+  //     // Save the workbook to the file system
+  //     await workbook.xlsx.writeFile(filePath);
+  
+  //     return { message: "Slots successfully exported to Excel.", filePath };
+  //   } catch (error) {
+  //     throw new Error(`Error exporting slots to Excel: ${error.message}`);
+  //   }
+  // }
   
 
   // static async upcomingTokens(doctorId) {

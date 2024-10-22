@@ -7,7 +7,8 @@ const moment = require("moment-timezone");
 const doctorModel = require("../../models/doctor");
 moment.tz.setDefault("Asia/Kolkata");
 const cron = require("node-cron");
-const patientModel = require('../../models/patients'); 
+const patientModel = require("../../models/patients");
+const { saveSlotsToDailyReport } = require("../../helpers/utility");
 
 // Schedule a cron job to run every day at midnight (00:00)
 cron.schedule("0 0 * * *", async () => {
@@ -30,48 +31,23 @@ cron.schedule("0 0 * * *", async () => {
   }
 });
 
-// const updateProfile = async (req, res) => {
-//   try {
-//     let { totalTokensPerDay, recallAfter, averageConsultationTime } = req.body;
+//daily report
 
-//     // Ensure averageConsultationTime is stored in minutes
-//     if (averageConsultationTime < 0) {  // Adding a check for negative values
-//       return res.status(status.ERROR).send(utility.errorRes("Consultation time cannot be negative."));
-//     }
-
-//     const [workingHoursStarting, workingHoursEnding] =
-//       validate.validateStartTimeAndEndTime(
-//         req.body.workingHoursStarting,
-//         req.body.workingHoursEnding
-//       );
-
-//     const updatedData = await doctorModel.findByIdAndUpdate(
-//       req.doctorData.doctorId,
-//       {
-//         workingHoursStarting,
-//         workingHoursEnding,
-//         totalTokensPerDay,
-//         recallAfter,
-//         averageConsultationTime,  // Expecting this to be in minutes
-//       },
-//       { new: true }
-//     );
-
-//     return res
-//       .status(status.SUCCESS)
-//       .send(utility.successRes(MSG.updatedSuccessfully, updatedData));
-//   } catch (error) {
-//     console.log(error);
-//     return res
-//       .status(status.ERROR)
-//       .send(utility.errorRes(MSG.somethingWentWrong));
-//   }
-// };
+cron.schedule(
+  "0 23 * * *",
+  async () => {
+    console.log("Running daily slot save task...");
+    await saveSlotsToDailyReport(); // Call the function to save slots to daily report
+  },
+  {
+    timezone: "Asia/Kolkata", // Set your timezone if needed
+  }
+);
 
 const updateProfile = async (req, res) => {
   try {
     let { totalTokensPerDay, recallAfter, consultationTime } = req.body;
-console.log(consultationTime);
+    console.log(consultationTime);
 
     // Ensure averageConsultationTime is stored in minutes
     if (consultationTime < 0) {
@@ -115,29 +91,6 @@ console.log(consultationTime);
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
-
-//excel
-
-// const excel = async(req,res)=>{
-//   try {
-//     const { doctorId } = req.doctorData; 
-//     console.log(doctorId);
-//     // Extract doctorId from request
-//     const result = await utility.exportSlotsToExcel(doctorId);
-//     if (result.filePath) {
-//       res.download(result.filePath, (err) => {
-//         if (err) {
-//           res.status(500).send('Error downloading the file.');
-//         }
-//       });
-//     } else {
-//       res.status(404).send(result.message);
-//     }
-//   } catch (error) {
-//     res.status(500).send(`Server error: ${error.message}`);
-//   }
-// }
-
 
 //test
 
@@ -189,21 +142,26 @@ const getCurrentTokenWithTime = async (req, res) => {
     const { additionalTime } = req.body; // Extract additionalTime from request body
 
     // Validate doctorId and additionalTime...
-    
+
     // Fetch and update the current token with the additional consultation time
     const token = await utility.currentToken(doctorId, additionalTime);
 
     if (!token) {
-      return res.status(status.NOT_FOUND).send(utility.errorRes(MSG.tokenNotFound));
+      return res
+        .status(status.NOT_FOUND)
+        .send(utility.errorRes(MSG.tokenNotFound));
     }
 
-    return res.status(status.SUCCESS).send(utility.successRes(MSG.foundSuccessfully, token));
+    return res
+      .status(status.SUCCESS)
+      .send(utility.successRes(MSG.foundSuccessfully, token));
   } catch (error) {
     console.error("Error in getCurrentTokenWithTime:", error);
-    return res.status(status.ERROR).send(utility.errorRes(MSG.somethingWentWrong));
+    return res
+      .status(status.ERROR)
+      .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
-
 
 const doctorDetails = async (req, res) => {
   try {
@@ -323,20 +281,16 @@ const getTodayTokens = async (req, res) => {
   }
 };
 
-
 //patient details
-
-// Assuming it's in the models directory
 
 const savePatientDetails = async (req, res) => {
   try {
-    const { name, mobileNumber, remarks } = req.body;
-    const { doctorId } = req.doctorData;// Extract doctor ID from the request
-console.log(name, mobileNumber,doctorId);
+    const { name, mobileNumber, remarks, tokenNo } = req.body; // Include tokenNo in the request body
+    const { doctorId } = req.doctorData; // Extract doctor ID from the request
 
     // Basic validation for mobile number and name
-    if (!name || !mobileNumber) {
-      return res.status(400).send(utility.errorRes('Name and mobile number are required.'));
+    if (!name || !mobileNumber || tokenNo === undefined) {
+      return res.status(400).send(utility.errorRes('Name, mobile number, and token number are required.'));
     }
 
     // Ensure mobile number format is valid (optional)
@@ -351,12 +305,13 @@ console.log(name, mobileNumber,doctorId);
       return res.status(400).send(utility.errorRes('Patient with this mobile number already exists for this doctor.'));
     }
 
-    // Create a new patient record
+    // Create a new patient record with tokenNo association
     const newPatient = new patientModel({
       name,
       mobileNumber,
       remarks,
       doctor: doctorId, // Associate patient with the doctor
+      tokenNo // Associate patient with the token number
     });
 
     await newPatient.save();
@@ -367,7 +322,6 @@ console.log(name, mobileNumber,doctorId);
     return res.status(500).send(utility.errorRes('Something went wrong while saving patient details.'));
   }
 };
-
 
 module.exports = {
   updateProfile,
