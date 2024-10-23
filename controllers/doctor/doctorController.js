@@ -46,7 +46,7 @@ cron.schedule(
 
 const updateProfile = async (req, res) => {
   try {
-    let { totalTokensPerDay, recallAfter, consultationTime } = req.body;
+    let { totalTokensPerDay, recallAfter, consultationTime,patientDetails } = req.body;
     console.log(consultationTime);
 
     // Ensure averageConsultationTime is stored in minutes
@@ -71,6 +71,7 @@ const updateProfile = async (req, res) => {
         workingHoursEnding,
         totalTokensPerDay,
         recallAfter,
+        patientDetails
       },
       { new: true }
     );
