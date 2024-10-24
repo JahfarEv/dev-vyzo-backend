@@ -9,6 +9,7 @@ moment.tz.setDefault("Asia/Kolkata");
 const cron = require("node-cron");
 const patientModel = require("../../models/patients");
 const { saveSlotsToDailyReport } = require("../../helpers/utility");
+const slot = require("../../models/slot");
 
 // Schedule a cron job to run every day at midnight (00:00)
 cron.schedule("0 0 * * *", async () => {
@@ -167,11 +168,31 @@ const getCurrentTokenWithTime = async (req, res) => {
 const doctorDetails = async (req, res) => {
   try {
     const { doctorId } = req.doctorData;
+
+    // Fetch doctor details
     const doctor = await doctorModel.findById(doctorId).lean();
+    if (!doctor) {
+      return res
+        .status(status.NOT_FOUND)
+        .send(utility.errorRes(MSG.doctorNotFound));
+    }
+
+    // Fetch a single consultation time from Slots model for this doctor
+    const slot = await slotModel.findOne({ doctor: doctorId }).select('consultationTime').lean();
+
+    // If no slot found, use default value or handle it
+    const consultationTime = slot ? slot.consultationTime : 5; // Default value set to 5
+
+    // Combine doctor details with consultation time
+    const doctorDetailsWithConsultationTime = {
+      ...doctor,
+      consultationTime, // Add consultation time to the response
+    };
 
     return res
       .status(status.SUCCESS)
-      .send(utility.successRes(MSG.foundSuccessfully, doctor));
+      .send(utility.successRes(MSG.foundSuccessfully, doctorDetailsWithConsultationTime));
+
   } catch (error) {
     console.log(error);
     return res
@@ -179,6 +200,7 @@ const doctorDetails = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
+
 
 // const getTodayTokens = async (req, res) => {
 //   try {
@@ -242,36 +264,36 @@ const getTodayTokens = async (req, res) => {
     const doctor = await doctorModel.findById(doctorId).lean();
 
     // Calculate average consultation time
-    let totalConsultationTime = 0; // Total consultation time in minutes
-    let tokenCount = 0; // Count of tokens
+    // let totalConsultationTime = 0; // Total consultation time in minutes
+    // let tokenCount = 0; // Count of tokens
 
-    for (const slot of slots) {
-      if (slot.startingTime && slot.endingTime) {
-        // Parse the starting and ending time
-        const startTime = moment(slot.startingTime, "HH:mm");
-        const endTime = moment(slot.endingTime, "HH:mm");
+    // for (const slot of slots) {
+    //   if (slot.startingTime && slot.endingTime) {
+    //     // Parse the starting and ending time
+    //     const startTime = moment(slot.startingTime, "HH:mm");
+    //     const endTime = moment(slot.endingTime, "HH:mm");
 
-        // Calculate the duration in minutes
-        const duration = endTime.diff(startTime, "minutes");
+    //     // Calculate the duration in minutes
+    //     const duration = endTime.diff(startTime, "minutes");
 
-        // Only add to total if duration is valid
-        if (duration > 0) {
-          totalConsultationTime += duration;
-          tokenCount += 1; // Increment count of valid tokens
-        }
-      }
-    }
+    //     // Only add to total if duration is valid
+    //     if (duration > 0) {
+    //       totalConsultationTime += duration;
+    //       tokenCount += 1; // Increment count of valid tokens
+    //     }
+    //   }
+    // }
 
-    // Calculate the average if tokenCount is greater than 0
-    const averageConsultationTimes =
-      tokenCount > 0 ? totalConsultationTime / tokenCount : 0; // Avoid division by zero
+    // // Calculate the average if tokenCount is greater than 0
+    // const averageConsultationTimes =
+    //   tokenCount > 0 ? totalConsultationTime / tokenCount : 0; // Avoid division by zero
 
     return res.status(status.SUCCESS).send(
       utility.successRes(MSG.foundSuccessfully, {
         tokens: slots,
         presenceData,
         doctor,
-        averageConsultationTimes, // Include average consultation time in the response
+        // averageConsultationTimes, // Include average consultation time in the response
       })
     );
   } catch (error) {

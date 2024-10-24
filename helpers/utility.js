@@ -581,7 +581,7 @@ class Utility {
           date: moment().format("DD/MM/YYYY"),
         })
         .sort("orderNumber")
-        .select("tokenNo orderNumber fileArrive startingTime endingTime")
+        .select("tokenNo orderNumber fileArrive startingTime endingTime consultationTime")
         .lean();
 
       return slots;
