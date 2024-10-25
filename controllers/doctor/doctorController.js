@@ -150,7 +150,7 @@ const getCurrentTokenWithTime = async (req, res) => {
 
     if (!token) {
       return res
-        .status(status.NOT_FOUND)
+        .status(status.NOTFOUND)
         .send(utility.errorRes(MSG.tokenNotFound));
     }
 
