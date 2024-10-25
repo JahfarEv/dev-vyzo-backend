@@ -4,7 +4,7 @@ module.exports = {
         name: 'stitching-app-backend',
         script: './bin/www',
         env: {
-          PORT: 3000,
+          PORT: 4000,
         },
       },
     ],
