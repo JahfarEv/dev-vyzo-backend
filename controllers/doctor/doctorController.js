@@ -9,7 +9,6 @@ moment.tz.setDefault("Asia/Kolkata");
 const cron = require("node-cron");
 const patientModel = require("../../models/patients");
 const { saveSlotsToDailyReport } = require("../../helpers/utility");
-const slot = require("../../models/slot");
 
 // Schedule a cron job to run every day at midnight (00:00)
 cron.schedule("0 0 * * *", async () => {
@@ -85,7 +84,8 @@ const updateProfile = async (req, res) => {
 
     return res
       .status(status.SUCCESS)
-      .send(utility.successRes(MSG.updatedSuccessfully, updatedDoctor));
+      .send(utility.successRes(MSG.updatedSuccessfully, {
+        updatedDoctor,}));
   } catch (error) {
     console.log(error);
     return res
@@ -173,7 +173,7 @@ const doctorDetails = async (req, res) => {
     const doctor = await doctorModel.findById(doctorId).lean();
     if (!doctor) {
       return res
-        .status(status.NOT_FOUND)
+        .status(status.NOTFOUND)
         .send(utility.errorRes(MSG.doctorNotFound));
     }
 
@@ -181,7 +181,7 @@ const doctorDetails = async (req, res) => {
     const slot = await slotModel.findOne({ doctor: doctorId }).select('consultationTime').lean();
 
     // If no slot found, use default value or handle it
-    const consultationTime = slot ? slot.consultationTime : 5; // Default value set to 5
+    const consultationTime = slot.consultationTime  // Default value set to 5
 
     // Combine doctor details with consultation time
     const doctorDetailsWithConsultationTime = {
@@ -252,7 +252,7 @@ const getTodayTokens = async (req, res) => {
       })
       .sort("orderNumber")
       .select(
-        "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus"
+        "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus consultationTime"
       )
       .lean();
 

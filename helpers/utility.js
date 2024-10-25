@@ -494,7 +494,7 @@ class Utility {
       if (!presenceData) {
         currentTime = moment.max(
           moment(),
-          moment(doctor.workingHoursStarting, "HH:mm")
+          moment(doctor?.workingHoursStarting, "HH:mm")
         );
       } else {
         if (presenceData.outTime) {
