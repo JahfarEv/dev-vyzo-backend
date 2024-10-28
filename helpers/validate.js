@@ -27,7 +27,7 @@ class Validate {
 
   static validateStartTimeAndEndTime(startTime, endTime) {
     if (!this.validateTimeFormat(startTime) || !this.validateTimeFormat(endTime)) {
-      return []
+      return [startTime, endTime]
     }
     // time should be in utility format: '10:30' '12:40'
     const [startHour, startMinute] = startTime.split(":").map(Number);

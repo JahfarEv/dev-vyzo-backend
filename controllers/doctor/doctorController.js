@@ -58,7 +58,8 @@ const updateProfile = async (req, res) => {
     }
 
     const [workingHoursStarting, workingHoursEnding] =
-      validate.validateStartTimeAndEndTime(
+      validate.validateStartTimeAndEndTime
+      (
         req.body.workingHoursStarting,
         req.body.workingHoursEnding
       );
@@ -346,6 +347,27 @@ const savePatientDetails = async (req, res) => {
   }
 };
 
+
+//get patients
+const getPatients = async(req, res)=>{
+  const { doctorId } = req.doctorData; // Extract doctor ID from the request
+  try {
+    // Fetch patients associated with the specified doctor ID
+    const patients = await patientModel.find({ doctor: doctorId });
+    
+    if (patients.length === 0) {
+      return res.status(404).send({ message: 'No patients found for this doctor.' });
+    }
+
+    return res.status(200).send({
+      message: 'Patients retrieved successfully.',
+      data: patients,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: 'Failed to retrieve patients.' });
+  }
+}
 module.exports = {
   updateProfile,
   getTodayTokens,
@@ -353,4 +375,5 @@ module.exports = {
   // updateTokenConsultationTime,
   getCurrentTokenWithTime,
   savePatientDetails,
+  getPatients
 };

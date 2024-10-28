@@ -8,5 +8,6 @@ router
   .put("/current-token", doctorController.getCurrentTokenWithTime)
   .post("/save-patient", doctorController.savePatientDetails)
   // .get("/export-slots", doctorController.excel)
+  .get("/patients", doctorController.getPatients)
 
 module.exports = router;
