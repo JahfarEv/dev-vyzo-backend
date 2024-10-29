@@ -420,29 +420,65 @@ function setupSocketIO(server) {
 
      //aditional time
 
-     socket.on('updateAdditionalTime', async (data) => {
-      if (socket.user.userType !== 'doctor') return null;
-      const { doctorId } = socket.user;
-      const { additionalTime } = data;
+    //  socket.on('updateAdditionalTime', async (data) => {
+    //   if (socket.user.userType !== 'doctor') return null;
+    //   const { doctorId } = socket.user;
+    //   const { additionalTime } = data;
     
+    //   try {
+    //     // Update the consultation time using the utility function
+    //     const updatedToken = await utility.currentToken(doctorId, additionalTime);
+    
+    //     if (updatedToken) {
+    //       // Emit updated token information to all clients in the doctor’s room
+    //       const roomName = `${doctorId}-${moment().format('DD/MM/YYYY')}`;
+    //       io.to(roomName).emit('receiveUpdate', {
+    //         tokenNo: updatedToken.tokenNo,
+    //         consultationTime: updatedToken.consultationTime,
+    //         expectedEndTime: updatedToken.expectedEndTime,
+    //         lastUpdated: moment().format('hh:mm:ss')
+    //       });
+    //     } else {
+    //       console.log('Token not found or update failed');
+    //     }
+    //   } catch (error) {
+    //     console.log('Error updating additional time:', error);
+    //   }
+    // });
+
+    //test
+    
+    socket.on('updateCurrentTokenTime', async ({ doctorId, additionalTime }) => {
       try {
-        // Update the consultation time using the utility function
-        const updatedToken = await utility.currentToken(doctorId, additionalTime);
-    
-        if (updatedToken) {
-          // Emit updated token information to all clients in the doctor’s room
-          const roomName = `${doctorId}-${moment().format('DD/MM/YYYY')}`;
-          io.to(roomName).emit('receiveUpdate', {
-            tokenNo: updatedToken.tokenNo,
-            consultationTime: updatedToken.consultationTime,
-            expectedEndTime: updatedToken.expectedEndTime,
-            lastUpdated: moment().format('hh:mm:ss')
-          });
-        } else {
-          console.log('Token not found or update failed');
+        // Validate doctorId and additionalTime if needed
+        if (!doctorId || additionalTime === undefined) {
+          return socket.emit('error', { message: 'Invalid data provided' });
         }
+    
+        // Fetch and update the current token with the additional consultation time
+        const token = await utility.currentToken(doctorId, additionalTime);
+    
+        if (!token) {
+          return socket.emit('tokenNotFound', { message: 'Token not found' });
+        }
+    
+        // Emit a success event with updated token data
+        socket.emit('currentTokenUpdated', {
+          message: 'Token updated successfully',
+          token,
+        });
+    
+        // Notify other relevant clients about the update
+        socket.broadcast.emit('currentTokenUpdateNotification', {
+          doctorId,
+          token,
+          additionalTime,
+        });
       } catch (error) {
-        console.log('Error updating additional time:', error);
+        console.error("Error in updateCurrentTokenTime:", error);
+        socket.emit('error', {
+          message: 'Something went wrong while updating token time',
+        });
       }
     });
     
