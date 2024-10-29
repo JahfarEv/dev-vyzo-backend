@@ -2,7 +2,6 @@ const doctorModel = require("../../models/doctor");
 const utility = require("../../helpers/utility");
 const validate = require("../../helpers/validate");
 const { status, MSG } = require("../../helpers/constants");
-// const SlotDataModel = require('../../models/dailyReport')
 const DailyReportModel = require("../../models/dailyReport");
 
 const createDoctor = async (req, res) => {
@@ -164,71 +163,6 @@ const getDailyReportByDoctor = async (req, res) => {
     res.status(500).send(`Error retrieving daily reports: ${error.message}`);
   }
 };
-
-// const excel = async(req, res) => {
-//   try {
-//     const doctorId = req.params.id;
-//     console.log(doctorId);
-
-//     // Extract doctorId from request and export slots to Excel
-//     const result = await utility.exportSlotsToExcel(doctorId);
-
-//     // If filePath exists, download the Excel file
-//     if (result.filePath) {
-//       res.download(result.filePath, (err) => {
-//         if (err) {
-//           res.status(500).send('Error downloading the file.');
-//         }
-//       });
-//     }
-//     // If there are no slots or an issue, return the message
-//     else if (result.message) {
-//       res.status(404).send(result.message); // Return the message when no slots are available
-//     } else {
-//       res.status(404).send('No data available to generate the Excel file.');
-//     }
-
-//   } catch (error) {
-//     res.status(500).send(`Server error: ${error.message}`);
-//   }
-// }
-
-// const saveSlotsToDatabase = async (req, res) => {
-//   try {
-//     const doctorId = req.params.id;
-//     console.log(`Saving slots for doctor ID: ${doctorId}`);
-
-//     // Call the function to save slots to MongoDB
-//     const result = await utility.saveSlotsToMongo(doctorId); // Use the function that saves to MongoDB
-
-//     // Check if a message was returned
-//     if (result.message) {
-//       res.status(200).send(result.message); // Send success message
-//     } else {
-//       res.status(404).send('No data available to save to the database.');
-//     }
-//   } catch (error) {
-//     res.status(500).send(`Server error: ${error.message}`);
-//   }
-// };
-
-// const getDoctorSlots = async (req, res) => {
-//   try {
-//     const doctorId = req.params.id;
-//     console.log(`Fetching slots for doctor ID: ${doctorId}`);
-
-//     // Query MongoDB to find the saved slots for the doctor
-//     const slots = await SlotDataModel.find({ doctor: doctorId }).lean(); // Replace 'SavedSlotsModel' with your actual MongoDB model name
-
-//     if (slots.length > 0) {
-//       res.status(200).json(slots); // Return the found slots as JSON
-//     } else {
-//       res.status(404).send('No slots found for the specified doctor.');
-//     }
-//   } catch (error) {
-//     res.status(500).send(`Server error: ${error.message}`);
-//   }
-// };
 
 module.exports = {
   createDoctor,

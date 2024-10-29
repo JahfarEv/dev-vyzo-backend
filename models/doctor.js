@@ -48,13 +48,6 @@ const DoctorSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
-
-
-    // averageConsultationTime: {
-    //   type: Number,
-    //   required: true,
-    //   default: 5
-    // },
     recallAfter: {
       type: Number,
       required: false,

@@ -46,7 +46,8 @@ cron.schedule(
 
 const updateProfile = async (req, res) => {
   try {
-    let { totalTokensPerDay, recallAfter, consultationTime,patientDetails } = req.body;
+    let { totalTokensPerDay, recallAfter, consultationTime, patientDetails } =
+      req.body;
     console.log(consultationTime);
 
     // Ensure averageConsultationTime is stored in minutes
@@ -58,8 +59,7 @@ const updateProfile = async (req, res) => {
     }
 
     const [workingHoursStarting, workingHoursEnding] =
-      validate.validateStartTimeAndEndTime
-      (
+      validate.validateStartTimeAndEndTime(
         req.body.workingHoursStarting,
         req.body.workingHoursEnding
       );
@@ -72,7 +72,7 @@ const updateProfile = async (req, res) => {
         workingHoursEnding,
         totalTokensPerDay,
         recallAfter,
-        patientDetails
+        patientDetails,
       },
       { new: true }
     );
@@ -83,10 +83,11 @@ const updateProfile = async (req, res) => {
       { $set: { consultationTime: consultationTime } } // Set average consultation time
     );
 
-    return res
-      .status(status.SUCCESS)
-      .send(utility.successRes(MSG.updatedSuccessfully, {
-        updatedDoctor,}));
+    return res.status(status.SUCCESS).send(
+      utility.successRes(MSG.updatedSuccessfully, {
+        updatedDoctor,
+      })
+    );
   } catch (error) {
     console.log(error);
     return res
@@ -94,48 +95,6 @@ const updateProfile = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
-
-//test
-
-// const updateTokenConsultationTime = async (req, res) => {
-//   try {
-//     const { tokenNo, consultationTime } = req.body;
-//     const { doctorId } = req.doctorData;
-
-//     // Validate consultation time
-//     if (consultationTime < 0) {
-//       return res
-//         .status(status.ERROR)
-//         .send(utility.errorRes("Consultation time cannot be negative."));
-//     }
-
-//     // Update specific token's consultation time
-//     const updatedToken = await slotModel.findOneAndUpdate(
-//       {
-//         doctor: doctorId,
-//         tokenNo: tokenNo,
-//         date: moment().format("DD/MM/YYYY"),
-//       },
-//       { $set: { consultationTime: consultationTime } },
-//       { new: true }
-//     );
-
-//     if (!updatedToken) {
-//       return res
-//         .status(status.ERROR)
-//         .send(utility.errorRes("Token not found or invalid."));
-//     }
-
-//     return res
-//       .status(status.SUCCESS)
-//       .send(utility.successRes(MSG.updatedSuccessfully, updatedToken));
-//   } catch (error) {
-//     console.log(error);
-//     return res
-//       .status(status.ERROR)
-//       .send(utility.errorRes(MSG.somethingWentWrong));
-//   }
-// };
 
 // CurrentTokenWithTime
 
@@ -179,10 +138,13 @@ const doctorDetails = async (req, res) => {
     }
 
     // Fetch a single consultation time from Slots model for this doctor
-    const slot = await slotModel.findOne({ doctor: doctorId }).select('consultationTime').lean();
+    const slot = await slotModel
+      .findOne({ doctor: doctorId })
+      .select("consultationTime")
+      .lean();
 
     // If no slot found, use default value or handle it
-    const consultationTime = slot.consultationTime  // Default value set to 5
+    const consultationTime = slot?.consultationTime; // Default value set to 5
 
     // Combine doctor details with consultation time
     const doctorDetailsWithConsultationTime = {
@@ -192,8 +154,12 @@ const doctorDetails = async (req, res) => {
 
     return res
       .status(status.SUCCESS)
-      .send(utility.successRes(MSG.foundSuccessfully, doctorDetailsWithConsultationTime));
-
+      .send(
+        utility.successRes(
+          MSG.foundSuccessfully,
+          doctorDetailsWithConsultationTime
+        )
+      );
   } catch (error) {
     console.log(error);
     return res
@@ -201,46 +167,6 @@ const doctorDetails = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
-
-
-// const getTodayTokens = async (req, res) => {
-//   try {
-//     const { doctorId } = req.doctorData;
-
-//     let slots = await slotModel
-//       .find({
-//         date: moment().format("DD/MM/YYYY"),
-//         doctor: doctorId,
-//       })
-//       .sort("orderNumber")
-//       .select(
-//         "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus"
-//       )
-//       .lean();
-
-//     if (!slots.length) {
-//       slots = await utility.feedTokens(doctorId);
-//     }
-
-//     const presenceData = await utility.doctorPresenceStatus(doctorId);
-//     const doctor = await doctorModel.findById(doctorId).lean();
-
-//     return res
-//       .status(status.SUCCESS)
-//       .send(
-//         utility.successRes(MSG.foundSuccessfully, {
-//           tokens: slots,
-//           presenceData,
-//           doctor,
-//         })
-//       );
-//   } catch (error) {
-//     console.log(error);
-//     return res
-//       .status(status.ERROR)
-//       .send(utility.errorRes(MSG.somethingWentWrong));
-//   }
-// };
 
 const getTodayTokens = async (req, res) => {
   try {
@@ -263,31 +189,6 @@ const getTodayTokens = async (req, res) => {
 
     const presenceData = await utility.doctorPresenceStatus(doctorId);
     const doctor = await doctorModel.findById(doctorId).lean();
-
-    // Calculate average consultation time
-    // let totalConsultationTime = 0; // Total consultation time in minutes
-    // let tokenCount = 0; // Count of tokens
-
-    // for (const slot of slots) {
-    //   if (slot.startingTime && slot.endingTime) {
-    //     // Parse the starting and ending time
-    //     const startTime = moment(slot.startingTime, "HH:mm");
-    //     const endTime = moment(slot.endingTime, "HH:mm");
-
-    //     // Calculate the duration in minutes
-    //     const duration = endTime.diff(startTime, "minutes");
-
-    //     // Only add to total if duration is valid
-    //     if (duration > 0) {
-    //       totalConsultationTime += duration;
-    //       tokenCount += 1; // Increment count of valid tokens
-    //     }
-    //   }
-    // }
-
-    // // Calculate the average if tokenCount is greater than 0
-    // const averageConsultationTimes =
-    //   tokenCount > 0 ? totalConsultationTime / tokenCount : 0; // Avoid division by zero
 
     return res.status(status.SUCCESS).send(
       utility.successRes(MSG.foundSuccessfully, {
@@ -314,19 +215,36 @@ const savePatientDetails = async (req, res) => {
 
     // Basic validation for mobile number and name
     if (!name || !mobileNumber || tokenNo === undefined) {
-      return res.status(400).send(utility.errorRes('Name, mobile number, and token number are required.'));
+      return res
+        .status(400)
+        .send(
+          utility.errorRes(
+            "Name, mobile number, and token number are required."
+          )
+        );
     }
 
     // Ensure mobile number format is valid (optional)
     const isValidMobile = /^[0-9]{10}$/.test(mobileNumber);
     if (!isValidMobile) {
-      return res.status(400).send(utility.errorRes('Invalid mobile number format.'));
+      return res
+        .status(400)
+        .send(utility.errorRes("Invalid mobile number format."));
     }
 
     // Check if the patient already exists for this doctor
-    let existingPatient = await patientModel.findOne({ mobileNumber, doctor: doctorId });
+    let existingPatient = await patientModel.findOne({
+      mobileNumber,
+      doctor: doctorId,
+    });
     if (existingPatient) {
-      return res.status(400).send(utility.errorRes('Patient with this mobile number already exists for this doctor.'));
+      return res
+        .status(400)
+        .send(
+          utility.errorRes(
+            "Patient with this mobile number already exists for this doctor."
+          )
+        );
     }
 
     // Create a new patient record with tokenNo association
@@ -335,45 +253,53 @@ const savePatientDetails = async (req, res) => {
       mobileNumber,
       remarks,
       doctor: doctorId, // Associate patient with the doctor
-      tokenNo // Associate patient with the token number
+      tokenNo, // Associate patient with the token number
     });
 
     await newPatient.save();
 
-    return res.status(200).send(utility.successRes('Patient details saved successfully.', newPatient));
+    return res
+      .status(200)
+      .send(
+        utility.successRes("Patient details saved successfully.", newPatient)
+      );
   } catch (error) {
     console.error(error);
-    return res.status(500).send(utility.errorRes('Something went wrong while saving patient details.'));
+    return res
+      .status(500)
+      .send(
+        utility.errorRes("Something went wrong while saving patient details.")
+      );
   }
 };
 
-
 //get patients
-const getPatients = async(req, res)=>{
+const getPatients = async (req, res) => {
   const { doctorId } = req.doctorData; // Extract doctor ID from the request
   try {
     // Fetch patients associated with the specified doctor ID
     const patients = await patientModel.find({ doctor: doctorId });
-    
+
     if (patients.length === 0) {
-      return res.status(404).send({ message: 'No patients found for this doctor.' });
+      return res
+        .status(404)
+        .send({ message: "No patients found for this doctor." });
     }
 
     return res.status(200).send({
-      message: 'Patients retrieved successfully.',
+      message: "Patients retrieved successfully.",
       data: patients,
     });
   } catch (error) {
     console.error(error);
-    return res.status(500).send({ message: 'Failed to retrieve patients.' });
+    return res.status(500).send({ message: "Failed to retrieve patients." });
   }
-}
+};
 module.exports = {
   updateProfile,
   getTodayTokens,
   doctorDetails,
-  // updateTokenConsultationTime,
   getCurrentTokenWithTime,
   savePatientDetails,
-  getPatients
+  getPatients,
 };

@@ -386,34 +386,7 @@ function setupSocketIO(server) {
       }
     });
 
-    //aditional time
-
-    socket.on('updateAdditionalTime', async (data) => {
-      if (socket.user.userType !== 'doctor') return null;
-      const { doctorId } = socket.user;
-      const { additionalTime } = data;
-    
-      try {
-        // Update the consultation time using the utility function
-        const updatedToken = await utility.currentToken(doctorId, additionalTime);
-    
-        if (updatedToken) {
-          // Emit updated token information to all clients in the doctor’s room
-          const roomName = `${doctorId}-${moment().format('DD/MM/YYYY')}`;
-          io.to(roomName).emit('receiveUpdate', {
-            tokenNo: updatedToken.tokenNo,
-            consultationTime: updatedToken.consultationTime,
-            expectedEndTime: updatedToken.expectedEndTime,
-            lastUpdated: moment().format('hh:mm:ss')
-          });
-        } else {
-          console.log('Token not found or update failed');
-        }
-      } catch (error) {
-        console.log('Error updating additional time:', error);
-      }
-    });
-    
+   
 
     socket.on('arriveFile', async (tokenNo) => {
       if (!tokenNo) return null;
@@ -444,6 +417,35 @@ function setupSocketIO(server) {
         console.log(error);
       }
     });
+
+     //aditional time
+
+     socket.on('updateAdditionalTime', async (data) => {
+      if (socket.user.userType !== 'doctor') return null;
+      const { doctorId } = socket.user;
+      const { additionalTime } = data;
+    
+      try {
+        // Update the consultation time using the utility function
+        const updatedToken = await utility.currentToken(doctorId, additionalTime);
+    
+        if (updatedToken) {
+          // Emit updated token information to all clients in the doctor’s room
+          const roomName = `${doctorId}-${moment().format('DD/MM/YYYY')}`;
+          io.to(roomName).emit('receiveUpdate', {
+            tokenNo: updatedToken.tokenNo,
+            consultationTime: updatedToken.consultationTime,
+            expectedEndTime: updatedToken.expectedEndTime,
+            lastUpdated: moment().format('hh:mm:ss')
+          });
+        } else {
+          console.log('Token not found or update failed');
+        }
+      } catch (error) {
+        console.log('Error updating additional time:', error);
+      }
+    });
+    
 
     socket.on('takeFile', async (tokenNo) => {
       if (!tokenNo) return null;
