@@ -633,8 +633,12 @@ class Utility {
       if (!token) return null;
 
       // Ensure consultationTime defaults to 0 if not a valid number
+      // const existingConsultationTime = token.consultationTime || 0;
+      // const updatedConsultationTime = additionalTime;
+
       const existingConsultationTime = token.consultationTime || 0;
-      const updatedConsultationTime =  additionalTime;
+const updatedConsultationTime = additionalTime === 0 ? existingConsultationTime : additionalTime;
+
 
       // Update the database with the new consultation time
       await slotModel.updateOne(
