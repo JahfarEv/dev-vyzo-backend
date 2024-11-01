@@ -8,5 +8,6 @@ router
   .put("/current-token", doctorController.getCurrentTokenWithTime)
   .post("/save-patient", doctorController.savePatientDetails)
   .get("/patients", doctorController.getPatients)
+  .put("/patients/:patientId", doctorController.updatePatient)
 
 module.exports = router;

@@ -9,6 +9,7 @@ moment.tz.setDefault("Asia/Kolkata");
 const cron = require("node-cron");
 const patientModel = require("../../models/patients");
 const { saveSlotsToDailyReport } = require("../../helpers/utility");
+const { default: mongoose } = require("mongoose");
 
 // Schedule a cron job to run every day at midnight (00:00)
 cron.schedule("0 0 * * *", async () => {
@@ -221,7 +222,11 @@ const savePatientDetails = async (req, res) => {
     }
 
     // Set default name to "NA" if not provided
-    const patientName = name || "NA";
+    const patientName = name || "Not Filled";
+    const patientMobileNo = mobileNumber || "Not Filled";
+    const patientRemarks = remarks || "Not Filled";
+
+
 
     // Check if the patient already exists for this doctor based on the token number
     let existingPatient = await patientModel.findOne({
@@ -241,8 +246,8 @@ const savePatientDetails = async (req, res) => {
     // Create a new patient record, setting name to "NA" if not provided
     const newPatient = new patientModel({
       name: patientName,
-      mobileNumber, // Will save mobileNumber if provided, otherwise undefined
-      remarks,
+      mobileNumber:patientMobileNo, // Will save mobileNumber if provided, otherwise undefined
+      remarks:patientRemarks,
       doctor: doctorId, // Associate patient with the doctor
       tokenNo, // Associate patient with the token number
     });
@@ -277,10 +282,16 @@ const getPatients = async (req, res) => {
         .status(404)
         .send({ message: "No patients found for this doctor." });
     }
+    const currentToken = await utility.currentToken(doctorId);
+
+console.log(currentToken.tokenNo);
 
     return res.status(200).send({
       message: "Patients retrieved successfully.",
-      data: patients,
+      data: {
+        patients,
+      currentToken
+    },
     });
   } catch (error) {
     console.error(error);
@@ -288,38 +299,38 @@ const getPatients = async (req, res) => {
   }
 };
 
-// const getPatients = async (req, res) => {
-//   const { doctorId } = req.doctorData; // Extract doctor ID from the request
+const updatePatient = async (req, res) => {
+  try {
+    const { patientId } = req.params; // Extract patientId from the URL params
+    const { name, mobileNumber, remarks } = req.body; // Data to update
 
-//   try {
-//     // Get the start and end of the current day
-//     const startOfDay = new Date();
-//     startOfDay.setHours(0, 0, 0, 0);
+    // Validate patientId
+    if (!mongoose.Types.ObjectId.isValid(patientId)) {
+      return res.status(400).send({ message: "Invalid patient ID format." });
+    }
 
-//     const endOfDay = new Date();
-//     endOfDay.setHours(23, 59, 59, 999);
+    // Find the patient by ID and update with new data
+    const updatedPatient = await patientModel.findByIdAndUpdate(
+      patientId,
+      { name, mobileNumber, remarks },
+      { new: true, runValidators: true } // Return updated document, enforce schema validators
+    );
 
-//     // Fetch patients associated with the specified doctor ID and created today
-//     const patients = await patientModel.find({
-//       doctor: doctorId,
-//       createdAt: { $gte: startOfDay, $lte: endOfDay }
-//     });
+    if (!updatedPatient) {
+      return res.status(404).send({ message: "Patient not found." });
+    }
 
-//     if (!patients.length) {
-//       return res
-//         .status(404)
-//         .send({ message: "No patients found for this doctor today." });
-//     }
-
-//     return res.status(200).send({
-//       message: "Patients retrieved successfully.",
-//       data: patients,
-//     });
-//   } catch (error) {
-//     console.error("Error retrieving patients:", error);
-//     return res.status(500).send({ message: "Failed to retrieve patients." });
-//   }
-// };
+    return res.status(200).send({
+      message: "Patient details updated successfully.",
+      data: updatedPatient,
+    });
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(500)
+      .send({ message: "Something went wrong while updating patient details." });
+  }
+};
 
 module.exports = {
   updateProfile,
@@ -328,4 +339,5 @@ module.exports = {
   getCurrentTokenWithTime,
   savePatientDetails,
   getPatients,
+  updatePatient
 };
