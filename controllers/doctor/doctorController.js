@@ -208,74 +208,6 @@ const getTodayTokens = async (req, res) => {
 
 //patient details
 
-// const savePatientDetails = async (req, res) => {
-//   try {
-//     const { name, mobileNumber, remarks, tokenNo } = req.body; // Include tokenNo in the request body
-//     const { doctorId } = req.doctorData; // Extract doctor ID from the request
-
-//     // Basic validation for mobile number and name
-//     if (!name || !mobileNumber || tokenNo === undefined) {
-//       return res
-//         .status(400)
-//         .send(
-//           utility.errorRes(
-//             "Name, mobile number, and token number are required."
-//           )
-//         );
-//     }
-
-//     // Ensure mobile number format is valid (optional)
-//     const isValidMobile = /^[0-9]{10}$/.test(mobileNumber);
-//     if (!isValidMobile) {
-//       return res
-//         .status(400)
-//         .send(utility.errorRes("Invalid mobile number format."));
-//     }
-
-//     // Check if the patient already exists for this doctor
-//     let existingPatient = await patientModel.findOne({
-//       mobileNumber,
-//       doctor: doctorId,
-//     });
-//     if (existingPatient) {
-//       return res
-//         .status(400)
-//         .send(
-//           utility.errorRes(
-//             "Patient with this mobile number already exists for this doctor."
-//           )
-//         );
-//     }
-
-//     // Create a new patient record with tokenNo association
-//     const newPatient = new patientModel({
-//       name,
-//       mobileNumber,
-//       remarks,
-//       doctor: doctorId, // Associate patient with the doctor
-//       tokenNo, // Associate patient with the token number
-//     });
-
-//     await newPatient.save();
-
-//     return res
-//       .status(200)
-//       .send(
-//         utility.successRes("Patient details saved successfully.", newPatient)
-//       );
-//   } catch (error) {
-//     console.error(error);
-//     return res
-//       .status(500)
-//       .send(
-//         utility.errorRes("Something went wrong while saving patient details.")
-//       );
-//   }
-// };
-
-
-//test
-
 const savePatientDetails = async (req, res) => {
   try {
     const { name, mobileNumber, remarks, tokenNo } = req.body;
@@ -285,9 +217,7 @@ const savePatientDetails = async (req, res) => {
     if (tokenNo === undefined) {
       return res
         .status(400)
-        .send(
-          utility.errorRes("Token number is required.")
-        );
+        .send(utility.errorRes("Token number is required."));
     }
 
     // Set default name to "NA" if not provided
@@ -334,52 +264,18 @@ const savePatientDetails = async (req, res) => {
   }
 };
 
-
-//get patients
-// const getPatients = async (req, res) => {
-//   const { doctorId } = req.doctorData; // Extract doctor ID from the request
-//   try {
-//     // Fetch patients associated with the specified doctor ID
-//     const patients = await patientModel.find({ doctor: doctorId });
-
-//     if (patients.length === 0) {
-//       return res
-//         .status(404)
-//         .send({ message: "No patients found for this doctor." });
-//     }
-
-//     return res.status(200).send({
-//       message: "Patients retrieved successfully.",
-//       data: patients,
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).send({ message: "Failed to retrieve patients." });
-//   }
-// };
-
-
 const getPatients = async (req, res) => {
   const { doctorId } = req.doctorData; // Extract doctor ID from the request
-
   try {
-    // Get the start and end of the current day
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // Fetch patients associated with the specified doctor ID, sorted by the most recent creation date
+    const patients = await patientModel
+      .find({ doctor: doctorId })
+      .sort({ createdAt: -1 }); // Sort by createdAt in descending order
 
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // Fetch patients associated with the specified doctor ID and created today
-    const patients = await patientModel.find({
-      doctor: doctorId,
-      createdAt: { $gte: startOfDay, $lte: endOfDay }
-    });
-
-    if (!patients.length) {
+    if (patients.length === 0) {
       return res
         .status(404)
-        .send({ message: "No patients found for this doctor today." });
+        .send({ message: "No patients found for this doctor." });
     }
 
     return res.status(200).send({
@@ -387,10 +283,43 @@ const getPatients = async (req, res) => {
       data: patients,
     });
   } catch (error) {
-    console.error("Error retrieving patients:", error);
+    console.error(error);
     return res.status(500).send({ message: "Failed to retrieve patients." });
   }
 };
+
+// const getPatients = async (req, res) => {
+//   const { doctorId } = req.doctorData; // Extract doctor ID from the request
+
+//   try {
+//     // Get the start and end of the current day
+//     const startOfDay = new Date();
+//     startOfDay.setHours(0, 0, 0, 0);
+
+//     const endOfDay = new Date();
+//     endOfDay.setHours(23, 59, 59, 999);
+
+//     // Fetch patients associated with the specified doctor ID and created today
+//     const patients = await patientModel.find({
+//       doctor: doctorId,
+//       createdAt: { $gte: startOfDay, $lte: endOfDay }
+//     });
+
+//     if (!patients.length) {
+//       return res
+//         .status(404)
+//         .send({ message: "No patients found for this doctor today." });
+//     }
+
+//     return res.status(200).send({
+//       message: "Patients retrieved successfully.",
+//       data: patients,
+//     });
+//   } catch (error) {
+//     console.error("Error retrieving patients:", error);
+//     return res.status(500).send({ message: "Failed to retrieve patients." });
+//   }
+// };
 
 module.exports = {
   updateProfile,
