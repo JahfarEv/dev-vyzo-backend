@@ -284,7 +284,6 @@ const getPatients = async (req, res) => {
     }
     const currentToken = await utility.currentToken(doctorId);
 
-console.log(currentToken.tokenNo);
 
     return res.status(200).send({
       message: "Patients retrieved successfully.",
