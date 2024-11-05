@@ -46,7 +46,7 @@ const DoctorSchema = new mongoose.Schema(
     },
     patientDetails: {
       type: Boolean,
-      default: false
+      default: true
     },
     recallAfter: {
       type: Number,
