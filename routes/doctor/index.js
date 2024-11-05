@@ -9,5 +9,6 @@ router
   .post("/save-patient", doctorController.savePatientDetails)
   .get("/patients", doctorController.getPatients)
   .put("/patients/:patientId", doctorController.updatePatient)
+  .get("/patient", doctorController.searchPatients)
 
 module.exports = router;

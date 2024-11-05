@@ -331,6 +331,47 @@ const updatePatient = async (req, res) => {
   }
 };
 
+
+//search patients
+const searchPatients = async (req, res) => {
+  const { doctorId } = req.doctorData; // Extract doctor ID from the request
+  const { mobileNumber } = req.query;  // Get mobileNumber from query parameters
+  
+  try {
+    // Build the query object with doctorId and optionally mobileNumber
+    const query = { doctor: doctorId };
+    if (mobileNumber) {
+      query.mobileNumber = mobileNumber; // Add mobileNumber to query if provided
+    }
+
+    // Fetch patients based on the query, sorted by the most recent creation date
+    const patients = await patientModel
+      .find(query)
+      .sort({ createdAt: -1 }); // Sort by createdAt in descending order
+
+    if (patients.length === 0) {
+      return res
+        .status(404)
+        .send({ message: "No patients found for this doctor." });
+    }
+
+    // Get the current token
+    const currentToken = await utility.currentToken(doctorId);
+
+    return res.status(200).send({
+      message: "Patients retrieved successfully.",
+      data: {
+        patients,
+        currentToken
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({ message: "Failed to retrieve patients." });
+  }
+};
+
+
 module.exports = {
   updateProfile,
   getTodayTokens,
@@ -338,5 +379,6 @@ module.exports = {
   getCurrentTokenWithTime,
   savePatientDetails,
   getPatients,
-  updatePatient
+  updatePatient,
+  searchPatients
 };
