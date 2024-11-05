@@ -81,7 +81,7 @@ const updateProfile = async (req, res) => {
     // Update average consultation time for all slots of this doctor
     await slotModel.updateMany(
       { doctor: req.doctorData.doctorId }, // Update all tokens for this doctor
-      // { $set: { consultationTime: consultationTime } } 
+      { $set: { consultationTime: consultationTime } } 
     );
 
     return res.status(status.SUCCESS).send(
