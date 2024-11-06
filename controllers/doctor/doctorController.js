@@ -140,7 +140,7 @@ const doctorDetails = async (req, res) => {
 
     // Fetch a single consultation time from Slots model for this doctor
     const slot = await slotModel
-      .findOne({ doctor: doctorId })
+      .findOne({ doctor: doctorId, tokenStatus: false })
       .select("consultationTime")
       .lean();
 
