@@ -48,6 +48,10 @@ const DoctorSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    initialSetup: {
+      type: Boolean,
+      default: false
+    },
     recallAfter: {
       type: Number,
       required: false,

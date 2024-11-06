@@ -74,6 +74,7 @@ const updateProfile = async (req, res) => {
         totalTokensPerDay,
         recallAfter,
         patientDetails,
+        initialSetup:true
       },
       { new: true }
     );
@@ -168,58 +169,6 @@ const doctorDetails = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
-
-// const doctorDetails = async (req, res) => {
-//   try {
-//     const { doctorId } = req.doctorData;
-
-//     // Fetch doctor details
-//     const doctor = await doctorModel.findById(doctorId).lean();
-//     if (!doctor) {
-//       return res
-//         .status(status.NOTFOUND)
-//         .send(utility.errorRes(MSG.doctorNotFound));
-//     }
-
-//     // Use aggregation to get the most repeated consultation time for this doctor
-//     const mostRepeatedSlot = await slotModel.aggregate([
-//       { $match: { doctor: doctorId } },                // Filter slots by doctorId
-//       { $group: {                                       // Group by consultationTime
-//           _id: "$consultationTime",
-//           count: { $sum: 1 }                            // Count occurrences of each consultationTime
-//         }
-//       },
-//       { $sort: { count: -1 } },                         // Sort by count in descending order
-//       { $limit: 1 }                                     // Get the consultation time with the highest count
-//     ]);
-// console.log(mostRepeatedSlot);
-
-//     // Check if we have any result for the most repeated consultation time
-//     const consultationTime = mostRepeatedSlot.length > 0 
-//       ? mostRepeatedSlot[0]._id 
-//       : 5;  // Default to 5 if no slots found
-
-//     // Combine doctor details with the most repeated consultation time
-//     const doctorDetailsWithConsultationTime = {
-//       ...doctor,
-//       consultationTime, // Add consultation time to the response
-//     };
-
-//     return res
-//       .status(status.SUCCESS)
-//       .send(
-//         utility.successRes(
-//           MSG.foundSuccessfully,
-//           doctorDetailsWithConsultationTime,
-//         )
-//       );
-//   } catch (error) {
-//     console.error(error);
-//     return res
-//       .status(status.ERROR)
-//       .send(utility.errorRes(MSG.somethingWentWrong));
-//   }
-// };
 
 
 const getTodayTokens = async (req, res) => {
