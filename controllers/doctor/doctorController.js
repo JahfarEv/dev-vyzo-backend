@@ -86,7 +86,7 @@ const updateProfile = async (req, res) => {
 
     return res.status(status.SUCCESS).send(
       utility.successRes(MSG.updatedSuccessfully, {
-        updatedDoctor,
+        updatedDoctor
       })
     );
   } catch (error) {
@@ -158,7 +158,7 @@ const doctorDetails = async (req, res) => {
       .send(
         utility.successRes(
           MSG.foundSuccessfully,
-          doctorDetailsWithConsultationTime
+          doctorDetailsWithConsultationTime,
         )
       );
   } catch (error) {
@@ -168,6 +168,59 @@ const doctorDetails = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
+
+// const doctorDetails = async (req, res) => {
+//   try {
+//     const { doctorId } = req.doctorData;
+
+//     // Fetch doctor details
+//     const doctor = await doctorModel.findById(doctorId).lean();
+//     if (!doctor) {
+//       return res
+//         .status(status.NOTFOUND)
+//         .send(utility.errorRes(MSG.doctorNotFound));
+//     }
+
+//     // Use aggregation to get the most repeated consultation time for this doctor
+//     const mostRepeatedSlot = await slotModel.aggregate([
+//       { $match: { doctor: doctorId } },                // Filter slots by doctorId
+//       { $group: {                                       // Group by consultationTime
+//           _id: "$consultationTime",
+//           count: { $sum: 1 }                            // Count occurrences of each consultationTime
+//         }
+//       },
+//       { $sort: { count: -1 } },                         // Sort by count in descending order
+//       { $limit: 1 }                                     // Get the consultation time with the highest count
+//     ]);
+// console.log(mostRepeatedSlot);
+
+//     // Check if we have any result for the most repeated consultation time
+//     const consultationTime = mostRepeatedSlot.length > 0 
+//       ? mostRepeatedSlot[0]._id 
+//       : 5;  // Default to 5 if no slots found
+
+//     // Combine doctor details with the most repeated consultation time
+//     const doctorDetailsWithConsultationTime = {
+//       ...doctor,
+//       consultationTime, // Add consultation time to the response
+//     };
+
+//     return res
+//       .status(status.SUCCESS)
+//       .send(
+//         utility.successRes(
+//           MSG.foundSuccessfully,
+//           doctorDetailsWithConsultationTime,
+//         )
+//       );
+//   } catch (error) {
+//     console.error(error);
+//     return res
+//       .status(status.ERROR)
+//       .send(utility.errorRes(MSG.somethingWentWrong));
+//   }
+// };
+
 
 const getTodayTokens = async (req, res) => {
   try {
@@ -333,15 +386,63 @@ const updatePatient = async (req, res) => {
 
 
 //search patients
+// const searchPatients = async (req, res) => {
+//   const { doctorId } = req.doctorData; // Extract doctor ID from the request
+//   const { mobileNumber } = req.query;  // Get mobileNumber from query parameters
+  
+//   try {
+//     // Build the query object with doctorId and optionally mobileNumber
+//     const query = { doctor: doctorId };
+//     if (mobileNumber) {
+//       query.mobileNumber = mobileNumber; // Add mobileNumber to query if provided
+//     }
+
+//     // Fetch patients based on the query, sorted by the most recent creation date
+//     const patients = await patientModel
+//       .find(query)
+//       .sort({ createdAt: -1 }); // Sort by createdAt in descending order
+
+//     if (patients.length === 0) {
+//       return res
+//         .status(404)
+//         .send({ message: "No patients found for this doctor." });
+//     }
+
+//     // Get the current token
+//     const currentToken = await utility.currentToken(doctorId);
+
+//     return res.status(200).send({
+//       message: "Patients retrieved successfully.",
+//       data: {
+//         patients,
+//         currentToken
+//       },
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     return res.status(500).send({ message: "Failed to retrieve patients." });
+//   }
+// };
+
+
 const searchPatients = async (req, res) => {
   const { doctorId } = req.doctorData; // Extract doctor ID from the request
-  const { mobileNumber } = req.query;  // Get mobileNumber from query parameters
-  
+  const { mobileNumber, name } = req.query; // Get mobileNumber or name from query parameters
+
   try {
-    // Build the query object with doctorId and optionally mobileNumber
+    // Build the query object with doctorId and optionally mobileNumber or name
     const query = { doctor: doctorId };
-    if (mobileNumber) {
-      query.mobileNumber = mobileNumber; // Add mobileNumber to query if provided
+
+    if (mobileNumber || name) {
+      query.$or = []; // Initialize the $or array for either mobileNumber or name
+
+      if (mobileNumber) {
+        query.$or.push({ mobileNumber }); // Add mobileNumber condition if provided
+      }
+
+      if (name) {
+        query.$or.push({ name: { $regex: name, $options: "i" } }); // Add name condition with case-insensitive regex
+      }
     }
 
     // Fetch patients based on the query, sorted by the most recent creation date

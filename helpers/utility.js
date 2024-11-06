@@ -643,7 +643,8 @@ const updatedConsultationTime = additionalTime === 0 ? existingConsultationTime 
       // Update the database with the new consultation time
       await slotModel.updateOne(
         { _id: token._id }, // Find the token by its ID
-        { consultationTime: updatedConsultationTime } // Update consultationTime
+        { consultationTime: updatedConsultationTime },
+        {tokenStatus:true} // Update consultationTime
       );
 
       // Calculate expected end time based on the updated consultation time

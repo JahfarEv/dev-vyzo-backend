@@ -83,11 +83,16 @@ const SlotSchema = new mongoose.Schema({
     required: false,
   },
   
-  tokenStatus: { // New field for token status
-    type: String,
-    enum: ['pending', 'in-progress', 'completed', 'cancelled'],
-    default: 'pending',
+  // tokenStatus: { // New field for token status
+  //   type: String,
+  //   enum: ['pending', 'in-progress', 'completed', 'cancelled'],
+  //   default: 'pending',
+  // },
+tokenStatus: { // New field for token status
+    type: Boolean,
+    default:false
   },
+
 }, {
   timestamps: true,
   minimize: false,
