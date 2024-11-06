@@ -617,51 +617,96 @@ class Utility {
   //     }
   //   }
 
-  static async currentToken(doctorId, additionalTime = 0) {
-    try {
-      // Fetch the current token with consultation time
-      const token = await slotModel
-        .findOne({
-          date: moment().format("DD/MM/YYYY"),
-          doctor: doctorId,
-          startingTime: { $exists: true, $ne: "" },
-          $or: [{ endingTime: { $exists: false } }, { endingTime: "" }],
-        })
-        .select("tokenNo consultationTime startingTime")
-        .lean();
+//   static async currentToken(doctorId, additionalTime = 0) {
+//     try {
+//       // Fetch the current token with consultation time
+//       const token = await slotModel
+//         .findOne({
+//           date: moment().format("DD/MM/YYYY"),
+//           doctor: doctorId,
+//           startingTime: { $exists: true, $ne: "" },
+//           $or: [{ endingTime: { $exists: false } }, { endingTime: "" }],
+//         })
+//         .select("tokenNo consultationTime startingTime")
+//         .lean();
 
-      if (!token) return null;
+//       if (!token) return null;
 
-      // Ensure consultationTime defaults to 0 if not a valid number
-      // const existingConsultationTime = token.consultationTime || 0;
-      // const updatedConsultationTime = additionalTime;
+//       // Ensure consultationTime defaults to 0 if not a valid number
+//       // const existingConsultationTime = token.consultationTime || 0;
+//       // const updatedConsultationTime = additionalTime;
 
-      const existingConsultationTime = token.consultationTime || 0;
-const updatedConsultationTime = additionalTime === 0 ? existingConsultationTime : additionalTime;
+//       const existingConsultationTime = token.consultationTime || 0;
+// const updatedConsultationTime = additionalTime === 0 ? existingConsultationTime : additionalTime;
 
 
-      // Update the database with the new consultation time
-      await slotModel.updateOne(
-        { _id: token._id }, // Find the token by its ID
-        { consultationTime: updatedConsultationTime },
-        {tokenStatus:true} // Update consultationTime
-      );
+//       // Update the database with the new consultation time
+//       await slotModel.updateOne(
+//         { _id: token._id }, // Find the token by its ID
+//         { consultationTime: updatedConsultationTime },
+//         {tokenStatus:true} // Update consultationTime
+//       );
 
-      // Calculate expected end time based on the updated consultation time
-      const expectedEndTime = moment(token.startingTime, "HH:mm:ss")
-        .add(updatedConsultationTime, "minutes")
-        .format("hh:mm A");
+//       // Calculate expected end time based on the updated consultation time
+//       const expectedEndTime = moment(token.startingTime, "HH:mm:ss")
+//         .add(updatedConsultationTime, "minutes")
+//         .format("hh:mm A");
 
-      return {
-        tokenNo: token.tokenNo,
-        consultationTime: updatedConsultationTime,
-        expectedEndTime: expectedEndTime,
-      };
-    } catch (error) {
-      console.error("Error in currentToken:", error);
-      throw error; // Rethrow the error for further handling
-    }
+//       return {
+//         tokenNo: token.tokenNo,
+//         consultationTime: updatedConsultationTime,
+//         expectedEndTime: expectedEndTime,
+//       };
+//     } catch (error) {
+//       console.error("Error in currentToken:", error);
+//       throw error; // Rethrow the error for further handling
+//     }
+//   }
+
+static async currentToken(doctorId, additionalTime = 0) {
+  try {
+    // Fetch the current token with consultation time
+    const token = await slotModel
+      .findOne({
+        date: moment().format("DD/MM/YYYY"),
+        doctor: doctorId,
+        startingTime: { $exists: true, $ne: "" },
+        $or: [{ endingTime: { $exists: false } }, { endingTime: "" }],
+      })
+      .select("tokenNo consultationTime startingTime")
+      .lean();
+
+    if (!token) return null;
+
+    // Set consultationTime to either the existing value or the provided additional time
+    const existingConsultationTime = token.consultationTime || 0;
+    const updatedConsultationTime = additionalTime === 0 ? existingConsultationTime : additionalTime;
+
+    // Update the database with the new consultation time and set tokenStatus to true
+    await slotModel.updateOne(
+      { _id: token._id }, // Find the token by its ID
+      { 
+        consultationTime: updatedConsultationTime, 
+        tokenStatus: true // Set tokenStatus to true
+      }
+    );
+
+    // Calculate expected end time based on the updated consultation time
+    const expectedEndTime = moment(token.startingTime, "HH:mm:ss")
+      .add(updatedConsultationTime, "minutes")
+      .format("hh:mm A");
+
+    return {
+      tokenNo: token.tokenNo,
+      consultationTime: updatedConsultationTime,
+      expectedEndTime: expectedEndTime,
+    };
+  } catch (error) {
+    console.error("Error in currentToken:", error);
+    throw error; // Rethrow the error for further handling
   }
+}
+
 
   static async doctorPresenceStatus(doctorId) {
     try {
