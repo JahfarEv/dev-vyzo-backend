@@ -182,7 +182,7 @@ const getTodayTokens = async (req, res) => {
       })
       .sort("orderNumber")
       .select(
-        "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus consultationTime"
+        "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus consultationTime initialSetup"
       )
       .lean();
 
