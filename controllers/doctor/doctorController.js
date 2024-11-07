@@ -10,6 +10,10 @@ const cron = require("node-cron");
 const patientModel = require("../../models/patients");
 const { saveSlotsToDailyReport } = require("../../helpers/utility");
 const { default: mongoose } = require("mongoose");
+const XLSX = require("xlsx"); // Import xlsx package
+const fs = require("fs"); // To handle file system operations
+const path = require("path");
+
 
 // Schedule a cron job to run every day at midnight (00:00)
 cron.schedule("0 0 * * *", async () => {
@@ -300,6 +304,77 @@ const getPatients = async (req, res) => {
   }
 };
 
+
+//download patients
+
+ // To handle file paths
+
+ 
+ 
+ const downloadPatients = async (req, res) => {
+   const { doctorId } = req.doctorData; // Extract doctor ID from the request
+   try {
+     // Fetch the doctor details to get the doctor's name
+     const doctor = await doctorModel.findById(doctorId);
+     if (!doctor) {
+       return res.status(404).send({ message: "Doctor not found." });
+     }
+ 
+     // Fetch patients associated with the specified doctor ID, sorted by the most recent creation date
+     const patients = await patientModel
+       .find({ doctor: doctorId })
+       .sort({ createdAt: -1 });
+ 
+     if (patients.length === 0) {
+       return res.status(404).send({ message: "No patients found for this doctor." });
+     }
+ 
+     // Optional: Add a token if needed
+     const currentToken = await utility.currentToken(doctorId);
+ 
+     // Transform patient data for Excel
+     const patientData = patients.map(patient => ({
+      token: patient.tokenNo,
+       Name: patient.name,
+       Age: patient.age,
+       Gender: patient.gender,
+       CreatedAt: patient.createdAt.toISOString(),
+       // Add other fields as needed
+     }));
+ 
+     // Create a new workbook and add the data to a worksheet
+     const workbook = XLSX.utils.book_new();
+     const worksheet = XLSX.utils.json_to_sheet(patientData);
+     XLSX.utils.book_append_sheet(workbook, worksheet, "Patients");
+ 
+     // Format the filename with doctor's name and current date
+     const date = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+     const fileName = `${doctor.name.replace(/\s+/g, '_')}_Patients_${date}.xlsx`; // Replace spaces with underscores
+ 
+     // Save the workbook to a temporary file
+     const filePath = path.join(__dirname, fileName);
+     XLSX.writeFile(workbook, filePath);
+ 
+     // Send the file as a response
+     res.download(filePath, fileName, err => {
+       if (err) {
+         console.error("File download error:", err);
+         return res.status(500).send({ message: "Failed to download Excel file." });
+       }
+ 
+       // Delete the file after sending to free up server space
+       fs.unlink(filePath, err => {
+         if (err) console.error("File deletion error:", err);
+       });
+     });
+ 
+   } catch (error) {
+     console.error(error);
+     return res.status(500).send({ message: "Failed to retrieve patients." });
+   }
+ };
+ 
+
 const updatePatient = async (req, res) => {
   try {
     const { patientId } = req.params; // Extract patientId from the URL params
@@ -332,46 +407,6 @@ const updatePatient = async (req, res) => {
       .send({ message: "Something went wrong while updating patient details." });
   }
 };
-
-
-//search patients
-// const searchPatients = async (req, res) => {
-//   const { doctorId } = req.doctorData; // Extract doctor ID from the request
-//   const { mobileNumber } = req.query;  // Get mobileNumber from query parameters
-  
-//   try {
-//     // Build the query object with doctorId and optionally mobileNumber
-//     const query = { doctor: doctorId };
-//     if (mobileNumber) {
-//       query.mobileNumber = mobileNumber; // Add mobileNumber to query if provided
-//     }
-
-//     // Fetch patients based on the query, sorted by the most recent creation date
-//     const patients = await patientModel
-//       .find(query)
-//       .sort({ createdAt: -1 }); // Sort by createdAt in descending order
-
-//     if (patients.length === 0) {
-//       return res
-//         .status(404)
-//         .send({ message: "No patients found for this doctor." });
-//     }
-
-//     // Get the current token
-//     const currentToken = await utility.currentToken(doctorId);
-
-//     return res.status(200).send({
-//       message: "Patients retrieved successfully.",
-//       data: {
-//         patients,
-//         currentToken
-//       },
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     return res.status(500).send({ message: "Failed to retrieve patients." });
-//   }
-// };
 
 
 const searchPatients = async (req, res) => {
@@ -430,5 +465,6 @@ module.exports = {
   savePatientDetails,
   getPatients,
   updatePatient,
-  searchPatients
+  searchPatients,
+  downloadPatients
 };

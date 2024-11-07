@@ -10,5 +10,6 @@ router
   .get("/patients", doctorController.getPatients)
   .put("/patients/:patientId", doctorController.updatePatient)
   .get("/patient", doctorController.searchPatients)
+  .get("/patient/download", doctorController.downloadPatients)
 
 module.exports = router;
