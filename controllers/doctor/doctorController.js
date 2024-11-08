@@ -256,6 +256,8 @@ const savePatientDetails = async (req, res) => {
       remarks:patientRemarks,
       doctor: doctorId, // Associate patient with the doctor
       tokenNo, // Associate patient with the token number
+      createdDate: Date.now(), // Add the created date here
+
     });
 
     await newPatient.save();
