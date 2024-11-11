@@ -148,11 +148,10 @@ const getDailyReportByDoctor = async (req, res) => {
     const doctorId = req.params.id; // Get doctor ID from the request parameters
     console.log(doctorId);
 
-    // Find all daily reports for the specific doctor
-    const reports = await DailyReportModel.find({ doctor: doctorId }).populate(
-      "doctor",
-      "name"
-    );
+    // Find all daily reports for the specific doctor and sort by startingTime
+    const reports = await DailyReportModel.find({ doctor: doctorId })
+      .populate("doctor", "name")
+      .sort({ startingTime: 1 }); // Sort by startingTime in ascending order
 
     if (reports.length === 0) {
       return res.status(404).send("No daily reports found for this doctor.");
@@ -163,6 +162,7 @@ const getDailyReportByDoctor = async (req, res) => {
     res.status(500).send(`Error retrieving daily reports: ${error.message}`);
   }
 };
+
 
 module.exports = {
   createDoctor,

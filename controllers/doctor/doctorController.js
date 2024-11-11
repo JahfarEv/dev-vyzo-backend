@@ -215,6 +215,70 @@ const getTodayTokens = async (req, res) => {
 
 //patient details
 
+// const savePatientDetails = async (req, res) => {
+//   try {
+//     const { name, mobileNumber, remarks, tokenNo } = req.body;
+//     const { doctorId } = req.doctorData;
+
+//     // Basic validation for token number only
+//     if (tokenNo === undefined) {
+//       return res
+//         .status(400)
+//         .send(utility.errorRes("Token number is required."));
+//     }
+
+//     // Set default name to "NA" if not provided
+//     const patientName = name || "Not Filled";
+//     const patientMobileNo = mobileNumber || "Not Filled";
+//     const patientRemarks = remarks || "Not Filled";
+
+
+
+//     // Check if the patient already exists for this doctor based on the token number
+//     let existingPatient = await patientModel.findOne({
+//       tokenNo,
+//       doctor: doctorId,
+//     });
+//     if (existingPatient) {
+//       return res
+//         .status(400)
+//         .send(
+//           utility.errorRes(
+//             "Patient with this token number already exists for this doctor."
+//           )
+//         );
+//     }
+
+//     // Create a new patient record, setting name to "NA" if not provided
+//     const newPatient = new patientModel({
+//       name: patientName,
+//       mobileNumber:patientMobileNo, // Will save mobileNumber if provided, otherwise undefined
+//       remarks:patientRemarks,
+//       doctor: doctorId, // Associate patient with the doctor
+//       tokenNo, // Associate patient with the token number
+//       createdDate: Date.now(), // Add the created date here
+
+//     });
+
+//     await newPatient.save();
+
+//     return res
+//       .status(200)
+//       .send(
+//         utility.successRes("Patient details saved successfully.", newPatient)
+//       );
+//   } catch (error) {
+//     console.error(error);
+//     return res
+//       .status(500)
+//       .send(
+//         utility.errorRes("Something went wrong while saving patient details.")
+//       );
+//   }
+// };
+
+//test
+
 const savePatientDetails = async (req, res) => {
   try {
     const { name, mobileNumber, remarks, tokenNo } = req.body;
@@ -227,37 +291,18 @@ const savePatientDetails = async (req, res) => {
         .send(utility.errorRes("Token number is required."));
     }
 
-    // Set default name to "NA" if not provided
+    // Set default values if not provided
     const patientName = name || "Not Filled";
     const patientMobileNo = mobileNumber || "Not Filled";
     const patientRemarks = remarks || "Not Filled";
 
-
-
-    // Check if the patient already exists for this doctor based on the token number
-    let existingPatient = await patientModel.findOne({
-      tokenNo,
-      doctor: doctorId,
-    });
-    if (existingPatient) {
-      return res
-        .status(400)
-        .send(
-          utility.errorRes(
-            "Patient with this token number already exists for this doctor."
-          )
-        );
-    }
-
-    // Create a new patient record, setting name to "NA" if not provided
+    // Create a new patient record
     const newPatient = new patientModel({
       name: patientName,
-      mobileNumber:patientMobileNo, // Will save mobileNumber if provided, otherwise undefined
-      remarks:patientRemarks,
-      doctor: doctorId, // Associate patient with the doctor
-      tokenNo, // Associate patient with the token number
-      createdDate: Date.now(), // Add the created date here
-
+      mobileNumber: patientMobileNo,
+      remarks: patientRemarks,
+      doctor: doctorId,
+      tokenNo,
     });
 
     await newPatient.save();
@@ -277,13 +322,15 @@ const savePatientDetails = async (req, res) => {
   }
 };
 
+
+
 const getPatients = async (req, res) => {
   const { doctorId } = req.doctorData; // Extract doctor ID from the request
   try {
     // Fetch patients associated with the specified doctor ID, sorted by the most recent creation date
     const patients = await patientModel
       .find({ doctor: doctorId })
-      .sort({ createdAt: -1 }); // Sort by createdAt in descending order
+      // .sort({ createdAt: -1 }); // Sort by createdAt in descending order
 
     if (patients.length === 0) {
       return res
