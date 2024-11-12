@@ -338,6 +338,7 @@ const getPatients = async (req, res) => {
         .send({ message: "No patients found for this doctor." });
     }
     const currentToken = await utility.currentToken(doctorId);
+console.log(currentToken);
 
 
     return res.status(200).send({

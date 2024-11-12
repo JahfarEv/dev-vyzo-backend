@@ -151,7 +151,7 @@ const getDailyReportByDoctor = async (req, res) => {
     // Find all daily reports for the specific doctor and sort by startingTime
     const reports = await DailyReportModel.find({ doctor: doctorId })
       .populate("doctor", "name")
-      .sort({ startingTime: 1 }); // Sort by startingTime in ascending order
+      // .sort({ startingTime: 1 }); // Sort by startingTime in ascending order
 
     if (reports.length === 0) {
       return res.status(404).send("No daily reports found for this doctor.");

@@ -673,7 +673,7 @@ static async currentToken(doctorId, additionalTime = 0) {
         startingTime: { $exists: true, $ne: "" },
         $or: [{ endingTime: { $exists: false } }, { endingTime: "" }],
       })
-      .select("tokenNo consultationTime startingTime")
+      .select("tokenNo consultationTime startingTime _id")
       .lean();
 
     if (!token) return null;
@@ -700,6 +700,7 @@ static async currentToken(doctorId, additionalTime = 0) {
       tokenNo: token.tokenNo,
       consultationTime: updatedConsultationTime,
       expectedEndTime: expectedEndTime,
+      tokenId:token._id
     };
   } catch (error) {
     console.error("Error in currentToken:", error);
@@ -814,7 +815,7 @@ static async currentToken(doctorId, additionalTime = 0) {
         {
           $push: {
             breaks: {
-              startTime: moment().format("HH:mm:ss A"),
+              startTime: moment().format("hh:mm:ss A"),
               estimatedTime,
               reason: reason ? reason : null,
             },
@@ -891,7 +892,7 @@ static async currentToken(doctorId, additionalTime = 0) {
                             $arrayElemAt: ["$breaks", "$$index"],
                           },
                           {
-                            endTime: moment().format("HH:mm:ss A"),
+                            endTime: moment().format("hh:mm:ss A"),
                           },
                         ],
                       },
