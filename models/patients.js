@@ -28,6 +28,8 @@ const patientSchema = new mongoose.Schema(
     remarks: { type: String },
     doctor: { type: mongoose.Schema.Types.ObjectId, ref: "Doctor" },
     tokenNo: { type: Number, required: true },
+    tokenId: { type: String, required: true },
+
     
   },
   { timestamps: true } // Mongoose will add createdAt and updatedAt automatically

@@ -281,7 +281,7 @@ const getTodayTokens = async (req, res) => {
 
 const savePatientDetails = async (req, res) => {
   try {
-    const { name, mobileNumber, remarks, tokenNo } = req.body;
+    const { name, mobileNumber, remarks, tokenNo, tokenId } = req.body;
     const { doctorId } = req.doctorData;
 
     // Basic validation for token number only
@@ -303,6 +303,7 @@ const savePatientDetails = async (req, res) => {
       remarks: patientRemarks,
       doctor: doctorId,
       tokenNo,
+      tokenId
     });
 
     await newPatient.save();
