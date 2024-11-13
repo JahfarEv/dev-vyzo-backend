@@ -11,5 +11,11 @@ router
   .put("/patients/:patientId", doctorController.updatePatient)
   .get("/patient", doctorController.searchPatients)
   .get("/patient/download", doctorController.downloadPatients)
+  // .delete("/details", doctorController.deleteAllTokensAndPatients)
+  // .delete("/slot", doctorController.deleteAllSlotsByDate)
+  // .delete("/patients", doctorController.deleteAllPatientsByDate)
+  .delete("/reset", doctorController.deleteAllTokensAndPatientsByDate)
+
+
 
 module.exports = router;

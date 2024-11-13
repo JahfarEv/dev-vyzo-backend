@@ -29,6 +29,10 @@ const patientSchema = new mongoose.Schema(
     doctor: { type: mongoose.Schema.Types.ObjectId, ref: "Doctor" },
     tokenNo: { type: Number, required: true },
     tokenId: { type: String, required: true },
+    date: { // in the format of DD/MM/YYYY
+    type: String,
+    required: true,
+  },
 
     
   },

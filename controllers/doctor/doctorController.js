@@ -213,6 +213,212 @@ const getTodayTokens = async (req, res) => {
   }
 };
 
+
+//delete slot and patients
+
+// const deleteAllTokensAndPatients = async (req, res) => {
+//   try {
+//     const { doctorId } = req.doctorData;
+//     const { date } = req.body;
+
+//     // Check if date parameter is provided
+//     if (!date) {
+//       return res.status(status.BAD_REQUEST).send(utility.errorRes("Date is required."));
+//     }
+
+//     // Delete all slots for the specific doctor and date
+//     const slotResult = await slotModel.deleteMany({
+//       doctor: doctorId,
+//       date: date,
+//     });
+
+//     // Delete all patients associated with the specific doctor and date
+//     const patientResult = await patientModel.deleteMany({
+//       doctor: doctorId,
+//       date: date,
+//     });
+
+//     // Check if no slots or patients were deleted
+//     if (slotResult.deletedCount === 0 && patientResult.deletedCount === 0) {
+//       return res
+//         .status(status.NOT_FOUND)
+//         .send(utility.errorRes("No slots or patients found for this doctor on the specified date."));
+//     }
+
+//     // Get updated doctor presence data after deletion
+//     const presenceData = await utility.doctorPresenceStatus(doctorId);
+
+//     // Get updated doctor information if needed
+//     const doctor = await doctorModel.findById(doctorId).lean();
+
+//     return res.status(status.SUCCESS).send(
+//       utility.successRes("All slots and patients for the doctor on the specified date deleted successfully.", {
+//         deletedSlotsCount: slotResult.deletedCount,
+//         deletedPatientsCount: patientResult.deletedCount,
+//         presenceData,
+//         doctor,
+//       })
+//     );
+//   } catch (error) {
+//     console.error(error);
+//     return res
+//       .status(status.ERROR)
+//       .send(utility.errorRes("Something went wrong while deleting slots and patients."));
+//   }
+// };
+
+//delete slots
+
+// const deleteAllSlotsByDate = async (req, res) => {
+//   try {
+//     const { doctorId } = req.doctorData;
+//     const { date } = req.body;
+
+//     // Check if date parameter is provided
+//     if (!date) {
+//       return res.status(status.BAD_REQUEST).send(utility.errorRes("Date is required."));
+//     }
+
+//     // Delete all slots for the specific doctor and date
+//     const slotResult = await slotModel.deleteMany({
+//       doctor: doctorId,
+//       date: date,
+//     });
+
+//     // Check if no slots were deleted
+//     if (slotResult.deletedCount === 0) {
+//       return res
+//         .status(status.NOTFOUND)
+//         .send(utility.errorRes("No slots found for this doctor on the specified date."));
+//     }
+
+//     return res.status(status.SUCCESS).send(
+//       utility.successRes("All slots for the doctor on the specified date deleted successfully.", {
+//         deletedSlotsCount: slotResult.deletedCount,
+//       })
+//     );
+//   } catch (error) {
+//     console.error(error);
+//     return res
+//       .status(status.ERROR)
+//       .send(utility.errorRes("Something went wrong while deleting slots."));
+//   }
+// };
+
+
+//delete patient details
+
+// const deleteAllPatientsByDate = async (req, res) => {
+//   try {
+//     const { doctorId } = req.doctorData;
+//     const { date } = req.body;
+// console.log(doctorId, date);
+
+//     // Check if date parameter is provided
+//     if (!date) {
+//       return res.status(status.BAD_REQUEST).send(utility.errorRes("Date is required."));
+//     }
+
+//     // Delete all patients for the specific doctor and date
+//     const patientResult = await patientModel.deleteMany({
+//       doctor: doctorId,
+//       date: date,
+//     });
+// console.log(patientResult);
+
+//     // Check if no patients were deleted
+//     if (patientResult.deletedCount === 0) {
+//       return res
+//         .status(status.NOTFOUND)
+//         .send(utility.errorRes("No patients found for this doctor on the specified date."));
+//     }
+
+//     return res.status(status.SUCCESS).send(
+//       utility.successRes("All patients for the doctor on the specified date deleted successfully.", {
+//         deletedPatientsCount: patientResult.deletedCount,
+//       })
+//     );
+//   } catch (error) {
+//     console.error(error);
+//     return res
+//       .status(status.ERROR)
+//       .send(utility.errorRes("Something went wrong while deleting patients."));
+//   }
+// };
+
+
+//optional
+
+const deleteAllTokensAndPatientsByDate = async (req, res) => {
+  try {
+    const { doctorId } = req.doctorData;
+    const { date, deleteType } = req.body; // Accept deleteType from body
+
+    if (!date) {
+      return res.status(status.BAD_REQUEST).send(utility.errorRes("Date is required."));
+    }
+
+    // Initialize deletion flags
+    let slotResult = null;
+    let patientResult = null;
+
+    // Delete slots if deleteType is "slots" or "both"
+    if (deleteType === "slots" || deleteType === "both") {
+      slotResult = await slotModel.deleteMany({
+        doctor: doctorId,
+        date: date,
+      });
+    }
+
+    // Delete patients if deleteType is "patients" or "both"
+    if (deleteType === "patients" || deleteType === "both") {
+      patientResult = await patientModel.deleteMany({
+        doctor: doctorId,
+        date: date,
+      });
+    }
+
+    // Check if any slots or patients were deleted
+    const deletedSlotsCount = slotResult ? slotResult.deletedCount : 0;
+    const deletedPatientsCount = patientResult ? patientResult.deletedCount : 0;
+
+    if (deletedSlotsCount === 0 && deletedPatientsCount === 0) {
+      return res
+        .status(status.NOT_FOUND)
+        .send(utility.errorRes("No slots or patients found for this doctor on the specified date."));
+    }
+
+    // Get updated doctor presence data after deletion
+    const presenceData = await utility.doctorPresenceStatus(doctorId);
+
+    // Get updated doctor information if needed
+    const doctor = await doctorModel.findById(doctorId).lean();
+
+    return res.status(status.SUCCESS).send(
+      utility.successRes("Slots and/or patients deleted successfully.", {
+        deletedSlotsCount,
+        deletedPatientsCount,
+        presenceData,
+        doctor,
+      })
+    );
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(status.ERROR)
+      .send(utility.errorRes("Something went wrong while deleting slots and patients."));
+  }
+};
+
+
+
+
+
+
+
+
+
+
 //patient details
 
 // const savePatientDetails = async (req, res) => {
@@ -303,7 +509,8 @@ const savePatientDetails = async (req, res) => {
       remarks: patientRemarks,
       doctor: doctorId,
       tokenNo,
-      tokenId
+      tokenId,
+      date: moment().format("DD/MM/YYYY"),
     });
 
     await newPatient.save();
@@ -331,7 +538,7 @@ const getPatients = async (req, res) => {
     // Fetch patients associated with the specified doctor ID, sorted by the most recent creation date
     const patients = await patientModel
       .find({ doctor: doctorId })
-      // .sort({ createdAt: -1 }); // Sort by createdAt in descending order
+      .sort({ createdAt: -1 }); // Sort by createdAt in descending order
 
     if (patients.length === 0) {
       return res
@@ -517,5 +724,9 @@ module.exports = {
   getPatients,
   updatePatient,
   searchPatients,
-  downloadPatients
+  downloadPatients,
+  // deleteAllTokensAndPatients,
+  // deleteAllSlotsByDate,
+  // deleteAllPatientsByDate,
+  deleteAllTokensAndPatientsByDate,
 };

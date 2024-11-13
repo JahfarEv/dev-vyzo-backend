@@ -487,6 +487,7 @@ class Utility {
         })
         .sort("orderNumber") // Assuming tokens are ordered by orderNumber
         .lean();
+// console.log(currentToken);
 
       // Calculate the current time for determining the start time for upcoming tokens
       let currentTime;
@@ -526,6 +527,7 @@ class Utility {
         // Set the current time to the expected end time for upcoming tokens
         currentTime = moment(expectedEndTime, "HH:mm");
       }
+console.log(currentTime);
 
       const slots = await slotModel
         .find({
