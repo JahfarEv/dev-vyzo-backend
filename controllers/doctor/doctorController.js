@@ -13,6 +13,7 @@ const { default: mongoose } = require("mongoose");
 const XLSX = require("xlsx"); // Import xlsx package
 const fs = require("fs"); // To handle file system operations
 const path = require("path");
+const doctorPresence = require("../../models/doctorPresence");
 
 
 // Schedule a cron job to run every day at midnight (00:00)
@@ -384,7 +385,7 @@ const deleteAllTokensAndPatientsByDate = async (req, res) => {
 
     if (deletedSlotsCount === 0 && deletedPatientsCount === 0) {
       return res
-        .status(status.NOT_FOUND)
+        .status(status.NOTFOUND)
         .send(utility.errorRes("No slots or patients found for this doctor on the specified date."));
     }
 
@@ -715,6 +716,46 @@ const searchPatients = async (req, res) => {
 };
 
 
+//get break time
+
+
+
+const   getDoctorBreakEstimatedTimes = async (req, res) => {
+  try {
+    const { doctorId } = req.doctorData;
+
+    // Find the latest presence record for the specified doctor, sorted by date or timestamp
+    const presenceData = await doctorPresence.findOne(
+      { doctor: doctorId },
+      { "breaks.estimatedTime": 1 } // Project only `estimatedTime` within `breaks`
+    )
+      .sort({ date: -1 }) // Sort by date in descending order to get the latest
+      .lean();
+
+    if (!presenceData || !presenceData.breaks || !presenceData.breaks.length) {
+      return res
+        .status(status.NOTFOUND)
+        .send(utility.errorRes("No break data found for this doctor."));
+    }
+
+    // Get the last estimatedTime from the breaks array
+    const lastEstimatedTime = presenceData.breaks[presenceData.breaks.length - 1].estimatedTime;
+
+    return res.status(status.SUCCESS).send(
+      utility.successRes("Last break estimated time fetched successfully", {
+        doctorId,
+        lastEstimatedTime,
+      })
+    );
+  } catch (error) {
+    console.error("Error retrieving last estimated time:", error);
+    return res
+      .status(status.ERROR)
+      .send(utility.errorRes("Something went wrong while fetching estimated time."));
+  }
+};
+
+
 module.exports = {
   updateProfile,
   getTodayTokens,
@@ -729,4 +770,5 @@ module.exports = {
   // deleteAllSlotsByDate,
   // deleteAllPatientsByDate,
   deleteAllTokensAndPatientsByDate,
+  getDoctorBreakEstimatedTimes
 };

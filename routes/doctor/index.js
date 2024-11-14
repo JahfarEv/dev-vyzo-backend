@@ -15,6 +15,7 @@ router
   // .delete("/slot", doctorController.deleteAllSlotsByDate)
   // .delete("/patients", doctorController.deleteAllPatientsByDate)
   .delete("/reset", doctorController.deleteAllTokensAndPatientsByDate)
+  .get("/break-time", doctorController.getDoctorBreakEstimatedTimes)
 
 
 
