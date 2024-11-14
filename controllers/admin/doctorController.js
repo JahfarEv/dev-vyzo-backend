@@ -3,6 +3,8 @@ const utility = require("../../helpers/utility");
 const validate = require("../../helpers/validate");
 const { status, MSG } = require("../../helpers/constants");
 const DailyReportModel = require("../../models/dailyReport");
+const slotModel = require("../../models/slot")
+const patientModel = require("../../models/patients")
 
 const createDoctor = async (req, res) => {
   try {
@@ -164,6 +166,64 @@ const getDailyReportByDoctor = async (req, res) => {
 };
 
 
+const deleteAllTokensAndPatientsByDate = async (req, res) => {
+  try {
+    const  doctorId  = req.params.id;
+    const { deleteType } = req.body; // Accept deleteType from body
+
+    
+
+    // Initialize deletion flags
+    let slotResult = null;
+    let patientResult = null;
+
+    // Delete slots if deleteType is "slots" or "both"
+    if (deleteType === "slots" || deleteType === "both") {
+      slotResult = await slotModel.deleteMany({
+        doctor: doctorId,
+      });
+    }
+
+    // Delete patients if deleteType is "patients" or "both"
+    if (deleteType === "patients" || deleteType === "both") {
+      patientResult = await patientModel.deleteMany({
+        doctor: doctorId,
+        // date: date,
+      });
+    }
+
+    // Check if any slots or patients were deleted
+    const deletedSlotsCount = slotResult ? slotResult.deletedCount : 0;
+    const deletedPatientsCount = patientResult ? patientResult.deletedCount : 0;
+
+    if (deletedSlotsCount === 0 && deletedPatientsCount === 0) {
+      return res
+        .status(status.NOTFOUND)
+        .send(utility.errorRes("No slots or patients found for this doctor on the specified date."));
+    }
+
+    // Get updated doctor presence data after deletion
+    const presenceData = await utility.doctorPresenceStatus(doctorId);
+
+    // Get updated doctor information if needed
+    const doctor = await doctorModel.findById(doctorId).lean();
+
+    return res.status(status.SUCCESS).send(
+      utility.successRes("Slots and/or patients deleted successfully.", {
+        deletedSlotsCount,
+        deletedPatientsCount,
+        presenceData,
+        doctor,
+      })
+    );
+  } catch (error) {
+    console.error(error);
+    return res
+      .status(status.ERROR)
+      .send(utility.errorRes("Something went wrong while deleting slots and patients."));
+  }
+};
+
 module.exports = {
   createDoctor,
   getDoctors,
@@ -171,4 +231,5 @@ module.exports = {
   deleteDoctor,
   getDoctorCount,
   getDailyReportByDoctor,
+  deleteAllTokensAndPatientsByDate
 };

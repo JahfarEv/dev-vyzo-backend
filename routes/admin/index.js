@@ -7,6 +7,8 @@ router.post('/doctor', doctorController.createDoctor)
   .put('/doctor/:id', doctorController.editDoctor)
   .delete('/doctor/:id', doctorController.deleteDoctor)
   .get("/doctor/report/:id", doctorController.getDailyReportByDoctor)
+  .delete("/reset/:id", doctorController.deleteAllTokensAndPatientsByDate)
+
 
 
 
