@@ -527,7 +527,6 @@ class Utility {
         // Set the current time to the expected end time for upcoming tokens
         currentTime = moment(expectedEndTime, "HH:mm");
       }
-console.log(currentTime);
 
       const slots = await slotModel
         .find({
