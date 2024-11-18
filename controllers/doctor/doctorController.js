@@ -275,9 +275,9 @@ const savePatientDetails = async (req, res) => {
     }
 
     // Set default values if not provided
-    const patientName = name || "Not Filled";
-    const patientMobileNo = mobileNumber || "Not Filled";
-    const patientRemarks = remarks || "Not Filled";
+    const patientName = name || "";
+    const patientMobileNo = mobileNumber || "";
+    const patientRemarks = remarks || "";
 
     const currentDate = moment().format("DD/MM/YYYY");
 
