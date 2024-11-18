@@ -195,7 +195,8 @@ function setupSocketIO(server) {
             date: moment().format('DD/MM/YYYY'),
             doctor: doctorId,
             tokenNo,
-            fileArrive: true
+            fileArrive: true,
+            completed:false
           },
           {
             startingTime: now
@@ -215,7 +216,9 @@ function setupSocketIO(server) {
             startingTime: { $exists: true, $ne: '' }
           },
           {
-            endingTime: now
+            endingTime: now,
+            completed:true
+
           }
         );
 
@@ -223,7 +226,11 @@ function setupSocketIO(server) {
       } catch (error) {
         console.log(error);
       }
+      
     });
+
+
+    
 
     socket.on('changeOrderToken', async (data) => {
       try {
