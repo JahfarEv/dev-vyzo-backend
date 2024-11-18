@@ -267,11 +267,11 @@ const savePatientDetails = async (req, res) => {
     const { name, mobileNumber, remarks, tokenNo, tokenId } = req.body;
     const { doctorId } = req.doctorData;
 
-    // Basic validation for token number
-    if (tokenNo === undefined) {
+    // Basic validation for token ID
+    if (!tokenId) {
       return res
         .status(400)
-        .send(utility.errorRes("Token number is required."));
+        .send(utility.errorRes("Token ID is required."));
     }
 
     // Set default values if not provided
@@ -281,16 +281,16 @@ const savePatientDetails = async (req, res) => {
 
     const currentDate = moment().format("DD/MM/YYYY");
 
-    // Check if tokenNo and date combination already exists
-    const existingPatient = await patientModel.findOne({ 
-      tokenNo, 
-      date: currentDate 
+    // Check if tokenId is already used for the same doctor
+    const existingTokenId = await patientModel.findOne({
+      tokenId,
+      doctor: doctorId,
     });
 
-    if (existingPatient) {
+    if (existingTokenId) {
       return res
         .status(400)
-        .send(utility.errorRes("Token number is already used for today."));
+        .send(utility.errorRes("Token ID is already used by this doctor."));
     }
 
     // Create a new patient record
@@ -299,7 +299,7 @@ const savePatientDetails = async (req, res) => {
       mobileNumber: patientMobileNo,
       remarks: patientRemarks,
       doctor: doctorId,
-      tokenNo,
+      tokenNo, // Can still be included if needed
       tokenId,
       date: currentDate,
     });
@@ -320,6 +320,7 @@ const savePatientDetails = async (req, res) => {
       );
   }
 };
+
 
 
 
