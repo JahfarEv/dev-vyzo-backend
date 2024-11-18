@@ -217,12 +217,57 @@ const getTodayTokens = async (req, res) => {
 
 //patient details
 
+// const savePatientDetails = async (req, res) => {
+//   try {
+//     const { name, mobileNumber, remarks, tokenNo, tokenId } = req.body;
+//     const { doctorId } = req.doctorData;
+
+//     // Basic validation for token number only
+//     if (tokenNo === undefined) {
+//       return res
+//         .status(400)
+//         .send(utility.errorRes("Token number is required."));
+//     }
+
+//     // Set default values if not provided
+//     const patientName = name || "Not Filled";
+//     const patientMobileNo = mobileNumber || "Not Filled";
+//     const patientRemarks = remarks || "Not Filled";
+
+//     // Create a new patient record
+//     const newPatient = new patientModel({
+//       name: patientName,
+//       mobileNumber: patientMobileNo,
+//       remarks: patientRemarks,
+//       doctor: doctorId,
+//       tokenNo,
+//       tokenId,
+//       date: moment().format("DD/MM/YYYY"),
+//     });
+
+//     await newPatient.save();
+
+//     return res
+//       .status(200)
+//       .send(
+//         utility.successRes("Patient details saved successfully.", newPatient)
+//       );
+//   } catch (error) {
+//     console.error(error);
+//     return res
+//       .status(500)
+//       .send(
+//         utility.errorRes("Something went wrong while saving patient details.")
+//       );
+//   }
+// };
+
 const savePatientDetails = async (req, res) => {
   try {
     const { name, mobileNumber, remarks, tokenNo, tokenId } = req.body;
     const { doctorId } = req.doctorData;
 
-    // Basic validation for token number only
+    // Basic validation for token number
     if (tokenNo === undefined) {
       return res
         .status(400)
@@ -234,6 +279,20 @@ const savePatientDetails = async (req, res) => {
     const patientMobileNo = mobileNumber || "Not Filled";
     const patientRemarks = remarks || "Not Filled";
 
+    const currentDate = moment().format("DD/MM/YYYY");
+
+    // Check if tokenNo and date combination already exists
+    const existingPatient = await patientModel.findOne({ 
+      tokenNo, 
+      date: currentDate 
+    });
+
+    if (existingPatient) {
+      return res
+        .status(400)
+        .send(utility.errorRes("Token number is already used for today."));
+    }
+
     // Create a new patient record
     const newPatient = new patientModel({
       name: patientName,
@@ -242,7 +301,7 @@ const savePatientDetails = async (req, res) => {
       doctor: doctorId,
       tokenNo,
       tokenId,
-      date: moment().format("DD/MM/YYYY"),
+      date: currentDate,
     });
 
     await newPatient.save();
@@ -261,6 +320,7 @@ const savePatientDetails = async (req, res) => {
       );
   }
 };
+
 
 
 
