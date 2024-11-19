@@ -162,6 +162,38 @@ function setupSocketIO(server) {
       }
     });
 
+
+    socket.on("tokenComplete", async (tokenNo) => {
+      if (!tokenNo) return null;
+      if (socket.user.userType !== "doctor") return null;
+      try {
+        const doctorId = socket.user.id;
+        const tokenData = await slotModel.findOneAndUpdate(
+          {
+            date: moment().format("DD/MM/YYYY"),
+            doctor: doctorId,
+            tokenNo,
+            startingTime: {
+              $exists: false,
+            },
+          },
+          {
+            completed: true,
+          },
+          {
+            new: false,
+          }
+        );
+
+        if (!tokenData || tokenData.completed) return null;
+
+        emitUpdateWithTimestamp(socket, doctorId);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+
+
     //update consultation time
 
     socket.on("updateConsultationTime", async (additionalTime) => {
@@ -230,31 +262,31 @@ function setupSocketIO(server) {
 
     // completed function
 
-    socket.on("completed", async (tokenNo) => {
-      if (!tokenNo) return null;
-      if (socket.user.userType !== "doctor") return null;
-      try {
-        const doctorId = socket.user.id;
-        const tokenData = await slotModel.findOneAndUpdate(
-          {
-            // date: moment().format('DD/MM/YYYY'),
-            doctor: doctorId,
-            fileArrive: true,
-            tokenNo,
-          },
-          {
-            endingTime: now,
-            completed: true,
-          }
-        );
+    // socket.on("completed", async (tokenNo) => {
+    //   if (!tokenNo) return null;
+    //   if (socket.user.userType !== "doctor") return null;
+    //   try {
+    //     const doctorId = socket.user.id;
+    //     const tokenData = await slotModel.findOneAndUpdate(
+    //       {
+    //         // date: moment().format('DD/MM/YYYY'),
+    //         doctor: doctorId,
+    //         fileArrive: true,
+    //         tokenNo,
+    //       },
+    //       {
+    //         endingTime: now,
+    //         completed: true,
+    //       }
+    //     );
 
-        if (!tokenData) return null;
+    //     if (!tokenData) return null;
 
-        emitUpdateWithTimestamp(socket, doctorId);
-      } catch (error) {
-        console.log(error);
-      }
-    });
+    //     emitUpdateWithTimestamp(socket, doctorId);
+    //   } catch (error) {
+    //     console.log(error);
+    //   }
+    // });
 
     socket.on("changeOrderToken", async (data) => {
       try {
