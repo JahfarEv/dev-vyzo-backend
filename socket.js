@@ -196,7 +196,7 @@ function setupSocketIO(server) {
             doctor: doctorId,
             tokenNo,
             fileArrive: true,
-            // completed:false
+            completed:false
           },
           {
             startingTime: now
@@ -228,6 +228,39 @@ function setupSocketIO(server) {
       }
       
     });
+
+
+    // completed function
+
+
+    socket.on('completed', async (tokenNo) => {
+      if (!tokenNo) return null;
+      if (socket.user.userType !== 'doctor') return null;
+      try {
+        const doctorId = socket.user.id;
+        const now = moment().format('hh:mm:ss');
+       
+        await slotModel.updateMany(
+          {
+            date: moment().format('DD/MM/YYYY'),
+            doctor: doctorId,
+            tokenNo,
+            completed:true
+
+          },
+          {
+            endingTime: now,
+
+          }
+        );
+
+        emitUpdateWithTimestamp(socket, doctorId);
+      } catch (error) {
+        console.log(error);
+      }
+      
+    });
+
 
 
     
