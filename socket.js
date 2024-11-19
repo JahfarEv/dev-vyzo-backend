@@ -196,7 +196,7 @@ function setupSocketIO(server) {
             doctor: doctorId,
             tokenNo,
             fileArrive: true,
-            completed:false
+            // completed:false
           },
           {
             startingTime: now
