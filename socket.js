@@ -148,15 +148,15 @@ function setupSocketIO(server) {
             },
           },
           {
-            completed: true,
-            // fileArrive: true,
+            // completed: true,
+            fileArrive: true,
           },
           {
             new: false,
           }
         );
 
-        if (!tokenData || tokenData.completed) return null;
+        if (!tokenData || tokenData.fileArrive) return null;
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
@@ -187,7 +187,7 @@ function setupSocketIO(server) {
           }
         );
 
-        if (!tokenData || tokenData.completed) return null;
+        if (!tokenData) return null;
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
