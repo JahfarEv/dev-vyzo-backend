@@ -1,3 +1,4 @@
+
 const socketIo = require("socket.io");
 const jwt = require("jsonwebtoken");
 const validate = require("./helpers/validate");
@@ -147,8 +148,8 @@ function setupSocketIO(server) {
             },
           },
           {
-            completed: true,
-            // fileArrive: true,
+            // completed: true,
+            fileArrive: true,
           },
           {
             new: false,
@@ -251,7 +252,7 @@ function setupSocketIO(server) {
           },
           {
             endingTime: now,
-            completed: true,
+            // completed: true,
           }
         );
 
