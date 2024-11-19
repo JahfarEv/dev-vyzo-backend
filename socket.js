@@ -238,7 +238,7 @@ function setupSocketIO(server) {
       if (socket.user.userType !== 'doctor') return null;
       try {
         const doctorId = socket.user.id;
-        const tokenData = await slotModel.findOneAndUpdate(
+        const tokenData = await slotModel.updateMany(
           {
             date: moment().format('DD/MM/YYYY'),
             doctor: doctorId,
