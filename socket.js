@@ -1,46 +1,47 @@
-const socketIo = require('socket.io');
-const jwt = require('jsonwebtoken')
-const validate = require('./helpers/validate')
-const utility = require('./helpers/utility');
-const slotModel = require('./models/slot')
-const doctorModel = require('./models/doctor')
-const moment = require('moment-timezone');
+const socketIo = require("socket.io");
+const jwt = require("jsonwebtoken");
+const validate = require("./helpers/validate");
+const utility = require("./helpers/utility");
+const slotModel = require("./models/slot");
+const doctorModel = require("./models/doctor");
+const moment = require("moment-timezone");
 moment.tz.setDefault("Asia/Kolkata");
-
 
 function setupSocketIO(server) {
   const io = socketIo(server, {
     cors: {
       origin: "*",
-      methods: ["GET", "POST"]
-    }
+      methods: ["GET", "POST"],
+    },
   });
 
   const authenticate = async (socket, next) => {
     const { token, userType } = socket.handshake.auth;
-    if (userType !== 'doctor') {
-      socket.user = { userType: 'customer' };
+    if (userType !== "doctor") {
+      socket.user = { userType: "customer" };
       return next();
     }
 
     if (!token) {
-      return next(new Error('Authentication error: Missing token or user type'));
+      return next(
+        new Error("Authentication error: Missing token or user type")
+      );
     }
 
     const tokenSecret = process.env.JWT_SECRET_DOCTOR;
     if (!tokenSecret) {
-      return next(new Error('Authentication error: Invalid user type'));
+      return next(new Error("Authentication error: Invalid user type"));
     }
 
     try {
       const verified = jwt.verify(token, tokenSecret);
       if (!validate.isValidObjectId(verified.doctorId)) {
-        throw new Error('Invalid token');
+        throw new Error("Invalid token");
       }
 
       socket.user = {
         userType,
-        id: verified.doctorId
+        id: verified.doctorId,
       };
       next();
     } catch (error) {
@@ -53,7 +54,7 @@ function setupSocketIO(server) {
   global.onlineUsers = new Map();
 
   io.on("connection", (socket) => {
-    console.log('connection established', socket.id);
+    console.log("connection established", socket.id);
     global.chatSocket = socket;
     onlineUsers.set(socket.user, socket.id);
 
@@ -63,27 +64,27 @@ function setupSocketIO(server) {
       updatedData.currentToken = await utility.currentToken(doctorId);
       updatedData.upcomingSlots = await utility.upcomingTokens(doctorId);
       updatedData.slots = await utility.tokensOfDoctor(doctorId);
-      updatedData.lastUpdated = moment().format('hh:mm:ss');  // Capture the last updated time
+      updatedData.lastUpdated = moment().format("hh:mm:ss"); // Capture the last updated time
 
-      const roomName = `${doctorId}-${moment().format('DD/MM/YYYY')}`;
-      io.to(roomName).emit('receiveUpdate', updatedData);
-      io.to(socket.id).emit('receiveUpdate', updatedData);
+      const roomName = `${doctorId}-${moment().format("DD/MM/YYYY")}`;
+      io.to(roomName).emit("receiveUpdate", updatedData);
+      io.to(socket.id).emit("receiveUpdate", updatedData);
     };
 
-    if (socket.user.userType === 'doctor') {
+    if (socket.user.userType === "doctor") {
       const currentData = {};
       utility.tokensOfDoctor(socket.user.id).then((slots) => {
         currentData.slots = slots;
-        currentData.lastUpdated = moment().format('hh:mm:ss');  // Capture initial timestamp
-        io.to(socket.id).emit('receiveUpdate', currentData);
+        currentData.lastUpdated = moment().format("hh:mm:ss"); // Capture initial timestamp
+        io.to(socket.id).emit("receiveUpdate", currentData);
       });
     }
 
     // For customer
-    socket.on('joinRoom', async (doctorId) => {
+    socket.on("joinRoom", async (doctorId) => {
       try {
         if (!doctorId) return null;
-        const roomName = `${doctorId}-${moment().format('DD/MM/YYYY')}`;
+        const roomName = `${doctorId}-${moment().format("DD/MM/YYYY")}`;
         socket.join(roomName);
         console.log(`${socket.id} joined in the room of ${roomName}`);
 
@@ -94,31 +95,31 @@ function setupSocketIO(server) {
     });
 
     // For Doctor
-    socket.on('updatePresence', async (data) => {
-      if (socket.user.userType !== 'doctor') return null;
+    socket.on("updatePresence", async (data) => {
+      if (socket.user.userType !== "doctor") return null;
       if (!data?.action) return null;
       const doctorId = socket.user.id;
 
       try {
         switch (data.action) {
-          case 'in':
+          case "in":
             await utility.doctorIn(doctorId);
             await utility.feedTokens(doctorId);
             break;
 
-          case 'out':
+          case "out":
             await utility.doctorClockOut(doctorId);
             break;
 
-          case 'take break':
+          case "take break":
             await utility.takeBreak({
               doctorId,
               estimatedTime: data.estimatedTime,
-              reason: data.reason
+              reason: data.reason,
             });
             break;
 
-          case 'return':
+          case "return":
             await utility.returnToWork(doctorId);
             break;
           default:
@@ -131,27 +132,25 @@ function setupSocketIO(server) {
       }
     });
 
-   
-
-    socket.on('arriveFile', async (tokenNo) => {
+    socket.on("arriveFile", async (tokenNo) => {
       if (!tokenNo) return null;
-      if (socket.user.userType !== 'doctor') return null;
+      if (socket.user.userType !== "doctor") return null;
       try {
         const doctorId = socket.user.id;
         const tokenData = await slotModel.findOneAndUpdate(
           {
-            date: moment().format('DD/MM/YYYY'),
+            date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
             tokenNo,
             startingTime: {
-              $exists: false
-            }
+              $exists: false,
+            },
           },
           {
-            fileArrive: true
+            fileArrive: true,
           },
           {
-            new: false
+            new: false,
           }
         );
 
@@ -165,60 +164,61 @@ function setupSocketIO(server) {
 
     //update consultation time
 
-    socket.on('updateConsultationTime', async (additionalTime) => {
-      if (socket.user.userType !== 'doctor') return null;
-    
+    socket.on("updateConsultationTime", async (additionalTime) => {
+      if (socket.user.userType !== "doctor") return null;
+
       try {
         const doctorId = socket.user.id;
-    
+
         // Call the currentToken method to update consultation time
-        const updatedTokenData = await utility.currentToken(doctorId, additionalTime);
-    
+        const updatedTokenData = await utility.currentToken(
+          doctorId,
+          additionalTime
+        );
+
         if (!updatedTokenData) return null;
-    
+
         // Emit an update with the new consultation time
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
         console.log(error);
       }
     });
-    
-    
-    socket.on('takeFile', async (tokenNo) => {
+
+    socket.on("takeFile", async (tokenNo) => {
       if (!tokenNo) return null;
-      if (socket.user.userType !== 'doctor') return null;
+      if (socket.user.userType !== "doctor") return null;
       try {
         const doctorId = socket.user.id;
-        const now = moment().format('hh:mm:ss');
+        const now = moment().format("hh:mm:ss");
         const tokenData = await slotModel.findOneAndUpdate(
           {
-            date: moment().format('DD/MM/YYYY'),
+            date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
             tokenNo,
             fileArrive: true,
             // completed:false
           },
           {
-            startingTime: now
+            startingTime: now,
           },
           {
-            new: false
+            new: false,
           }
         );
 
         if (!tokenData || tokenData.startingTime) return null;
         await slotModel.updateMany(
           {
-            date: moment().format('DD/MM/YYYY'),
+            date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
             tokenNo: { $ne: tokenNo },
             fileArrive: true,
-            startingTime: { $exists: true, $ne: '' }
+            startingTime: { $exists: true, $ne: "" },
           },
           {
             endingTime: now,
-            completed:true
-
+            completed: true,
           }
         );
 
@@ -226,32 +226,25 @@ function setupSocketIO(server) {
       } catch (error) {
         console.log(error);
       }
-      
     });
-
 
     // completed function
 
-
-    socket.on('completed', async (tokenNo) => {
+    socket.on("completed", async (tokenNo) => {
       if (!tokenNo) return null;
-      if (socket.user.userType !== 'doctor') return null;
+      if (socket.user.userType !== "doctor") return null;
       try {
         const doctorId = socket.user.id;
         const tokenData = await slotModel.findByIdAndUpdate(
           {
             // date: moment().format('DD/MM/YYYY'),
             doctor: doctorId,
-            fileArrive:true,
+            fileArrive: true,
             tokenNo,
-            
           },
           {
+            endingTime: now,
             completed: true,
-            endingTime: moment.now,
-          },
-          {
-            new: false
           }
         );
 
@@ -263,32 +256,24 @@ function setupSocketIO(server) {
       }
     });
 
-
-
-    
-
-    socket.on('changeOrderToken', async (data) => {
+    socket.on("changeOrderToken", async (data) => {
       try {
         if (!data.tokenNo || !data.newOrder) return null;
-        if (socket.user.userType !== 'doctor') return null;
+        if (socket.user.userType !== "doctor") return null;
         const doctorId = socket.user.id;
 
         await utility.changeOrder(doctorId, data.tokenNo, data.newOrder);
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
-        console.log(error, 'error in socket change order');
+        console.log(error, "error in socket change order");
       }
     });
 
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
       onlineUsers.delete(socket.user.id);
-      console.log('Client disconnected:', socket.id);
+      console.log("Client disconnected:", socket.id);
     });
   });
 }
 
-
-
 module.exports = { setupSocketIO };
-
-
