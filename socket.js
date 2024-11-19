@@ -245,10 +245,10 @@ function setupSocketIO(server) {
             date: moment().format('DD/MM/YYYY'),
             doctor: doctorId,
             tokenNo,
-            completed:true
-
+            
           },
           {
+            completed:true,
             endingTime: now,
 
           }
