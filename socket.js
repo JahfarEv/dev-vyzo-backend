@@ -242,20 +242,22 @@ function setupSocketIO(server) {
           {
             date: moment().format('DD/MM/YYYY'),
             doctor: doctorId,
+            fileArrive:true,
             tokenNo,
             startingTime: {
               $exists: false
             }
           },
           {
-            completed: true
+            completed: true,
+            endingTime: now,
           },
           {
             new: false
           }
         );
 
-        if (!tokenData || tokenData.fileArrive) return null;
+        if (!tokenData || tokenData.completed) return null;
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
