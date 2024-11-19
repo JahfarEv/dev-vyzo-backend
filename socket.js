@@ -148,6 +148,7 @@ function setupSocketIO(server) {
           },
           {
             fileArrive: true,
+            completed: true
           },
           {
             new: false,
