@@ -238,27 +238,29 @@ function setupSocketIO(server) {
       if (socket.user.userType !== 'doctor') return null;
       try {
         const doctorId = socket.user.id;
-        const now = moment().format('hh:mm:ss');
-       
-        await slotModel.updateMany(
+        const tokenData = await slotModel.findOneAndUpdate(
           {
             date: moment().format('DD/MM/YYYY'),
             doctor: doctorId,
             tokenNo,
-            
+            startingTime: {
+              $exists: false
+            }
           },
           {
-            completed:true,
-            endingTime: now,
-
+            completed: true
+          },
+          {
+            new: false
           }
         );
+
+        if (!tokenData || tokenData.fileArrive) return null;
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
         console.log(error);
       }
-      
     });
 
 
