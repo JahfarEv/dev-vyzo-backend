@@ -181,6 +181,7 @@ function setupSocketIO(server) {
           },
           {
             completed: true,
+            endingTime: now,
           },
           {
             new: false,
