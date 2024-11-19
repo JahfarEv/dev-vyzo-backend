@@ -148,7 +148,6 @@ function setupSocketIO(server) {
           },
           {
             fileArrive: true,
-            completed: true
           },
           {
             new: false,
@@ -236,7 +235,7 @@ function setupSocketIO(server) {
       if (socket.user.userType !== "doctor") return null;
       try {
         const doctorId = socket.user.id;
-        const tokenData = await slotModel.findByIdAndUpdate(
+        const tokenData = await slotModel.findOneAndUpdate(
           {
             // date: moment().format('DD/MM/YYYY'),
             doctor: doctorId,
