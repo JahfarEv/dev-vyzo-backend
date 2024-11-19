@@ -147,7 +147,8 @@ function setupSocketIO(server) {
             },
           },
           {
-            fileArrive: true,
+            completed: true,
+            // fileArrive: true,
           },
           {
             new: false,
