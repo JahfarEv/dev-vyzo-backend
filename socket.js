@@ -175,9 +175,9 @@ function setupSocketIO(server) {
             date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
             tokenNo,
-            startingTime: {
-              $exists: false,
-            },
+            // startingTime: {
+            //   $exists: false,
+            // },
           },
           {
             completed: true,
@@ -187,7 +187,7 @@ function setupSocketIO(server) {
           }
         );
 
-        if (!tokenData) return null;
+        // if (!tokenData) return null;
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
