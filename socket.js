@@ -156,7 +156,7 @@ function setupSocketIO(server) {
           }
         );
 
-        // if (!tokenData || tokenData.fileArrive) return null;
+        if (!tokenData || tokenData.completed) return null;
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
