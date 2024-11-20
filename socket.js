@@ -175,33 +175,18 @@ function setupSocketIO(server) {
             date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
             tokenNo,
-            // startingTime: {
-            //   $exists: false,
-            // },
           },
           {
-            startingTime: { $exists: true, $ne: "" },
             completed: true,
-            endingTime: now,
+            endingTime: moment().format("hh:mm:ss"), // Record ending time
+
+            
           },
           {
             new: false,
           }
         );
 
-        await slotModel.updateMany(
-          {
-            date: moment().format("DD/MM/YYYY"),
-            doctor: doctorId,
-            fileArrive: true,
-            startingTime: { $exists: true, $ne: "" },
-          },
-          {
-            endingTime: now,
-            completed: true,
-          }
-        );
-        // if (!tokenData) return null;
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
