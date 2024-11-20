@@ -175,7 +175,7 @@ function setupSocketIO(server) {
             date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
             tokenNo,
-            startingTime: { $exists: true, $ne: "" },
+            startingTime: { $exists: true},
 
             // startingTime: {
             //   $exists: false,
