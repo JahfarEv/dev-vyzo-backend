@@ -563,6 +563,9 @@ const searchPatients = async (req, res) => {
 const   getDoctorBreakEstimatedTimes = async (req, res) => {
   try {
     const { doctorId } = req.doctorData;
+    const currentToken = await utility.currentToken(doctorId);
+    const currentTokenNo = currentToken?.tokenNo;
+
 
     // Find the latest presence record for the specified doctor, sorted by date or timestamp
     const presenceData = await doctorPresence.findOne(
@@ -585,6 +588,7 @@ const   getDoctorBreakEstimatedTimes = async (req, res) => {
       utility.successRes("Last break estimated time fetched successfully", {
         doctorId,
         lastEstimatedTime,
+        currentTokenNo
       })
     );
   } catch (error) {

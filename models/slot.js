@@ -26,7 +26,6 @@ const SlotSchema = new mongoose.Schema({
   consultationTime: { // New field for consultation time
     type: Number, //rashid sugest type is string
     default:5,
-    // required: false, // Optional if not set at the time of creation
   },
   startingTime: {
     type: String,
