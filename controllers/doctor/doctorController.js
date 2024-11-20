@@ -325,28 +325,47 @@ const savePatientDetails = async (req, res) => {
 
 
 
+
+
 // const getPatients = async (req, res) => {
 //   const { doctorId } = req.doctorData; // Extract doctor ID from the request
 //   try {
-//     // Fetch patients associated with the specified doctor ID, sorted by the most recent creation date
-//     const patients = await patientModel
-//       .find({ doctor: doctorId })
-//       .sort({ createdAt: -1 }); // Sort by createdAt in descending order
+//     // Fetch current token for the doctor
+//     const currentToken = await utility.currentToken(doctorId);
+//     const currentTokenId = currentToken?.tokenId;
 
-//     if (patients.length === 0) {
+//     // Fetch patients associated with the specified doctor ID
+//     let patients = await patientModel.find({ doctor: doctorId });
+
+//     // Reorder patients so the one with tokenId matching currentTokenId comes first
+//     if (currentTokenId) {
+//       patients = patients.sort((a, b) => {
+//         // Place the patient with currentTokenId first
+//         if (String(a.tokenId) === String(currentTokenId)) return -1;
+//         if (String(b.tokenId) === String(currentTokenId)) return 1;
+
+//         // After current token patient, sort by last updated (updatedAt)
+//         if (a.updatedAt && b.updatedAt) {
+//           const aUpdatedAt = new Date(a.updatedAt).getTime();
+//           const bUpdatedAt = new Date(b.updatedAt).getTime();
+//           return bUpdatedAt - aUpdatedAt;  // Sort by most recent updatedAt
+//         }
+//         return 0; // Keep original order if no updatedAt field
+//       });
+//     }
+
+//     if (!patients.length) {
 //       return res
 //         .status(404)
 //         .send({ message: "No patients found for this doctor." });
 //     }
-//     const currentToken = await utility.currentToken(doctorId);
-
 
 //     return res.status(200).send({
 //       message: "Patients retrieved successfully.",
 //       data: {
 //         patients,
-//       currentToken
-//     },
+//         currentToken,
+//       },
 //     });
 //   } catch (error) {
 //     console.error(error);
@@ -365,23 +384,25 @@ const getPatients = async (req, res) => {
     // Fetch patients associated with the specified doctor ID
     let patients = await patientModel.find({ doctor: doctorId });
 
-    // Reorder patients so the one with tokenId matching currentTokenId comes first
-    if (currentTokenId) {
-      patients = patients.sort((a, b) => {
+    // Sort patients
+    patients = patients.sort((a, b) => {
+      if (currentTokenId) {
         // Place the patient with currentTokenId first
         if (String(a.tokenId) === String(currentTokenId)) return -1;
         if (String(b.tokenId) === String(currentTokenId)) return 1;
+      }
 
-        // After current token patient, sort by last updated (updatedAt)
-        if (a.updatedAt && b.updatedAt) {
-          const aUpdatedAt = new Date(a.updatedAt).getTime();
-          const bUpdatedAt = new Date(b.updatedAt).getTime();
-          return bUpdatedAt - aUpdatedAt;  // Sort by most recent updatedAt
-        }
-        return 0; // Keep original order if no updatedAt field
-      });
-    }
+      // Sort by updatedAt if available
+      if (a.updatedAt && b.updatedAt) {
+        const aUpdatedAt = new Date(a.updatedAt).getTime();
+        const bUpdatedAt = new Date(b.updatedAt).getTime();
+        return bUpdatedAt - aUpdatedAt; // Most recent first
+      }
 
+      return 0; // Keep original order if no `updatedAt`
+    });
+
+    // Handle case where no patients are found
     if (!patients.length) {
       return res
         .status(404)
@@ -400,8 +421,6 @@ const getPatients = async (req, res) => {
     return res.status(500).send({ message: "Failed to retrieve patients." });
   }
 };
-
-
 
 
 //download patients
