@@ -203,7 +203,10 @@ function setupSocketIO(server) {
       try {
         const doctorId = socket.user.id;
     
-        // Update the token and set the ending time
+        // Capture the current timestamp at the event trigger
+        const currentTime = moment().format("hh:mm:ss");
+    
+        // Update only the specific token with the captured timestamp
         const tokenData = await slotModel.findOneAndUpdate(
           {
             date: moment().format("DD/MM/YYYY"), // Match today's date
@@ -213,20 +216,21 @@ function setupSocketIO(server) {
           {
             $set: {
               completed: true,
-              endingTime: moment().format("hh:mm:ss"), // Set ending time dynamically
+              endingTime: currentTime, // Use the captured timestamp
             },
           },
           { new: true } // Return the updated document
         );
     
-        // If no token is found, handle it gracefully
         if (!tokenData) {
-          console.log(`Token not found or already updated for token number: ${tokenNo}`);
+          console.log(`Token not found for token number: ${tokenNo}`);
           return;
         }
     
-        // Emit updates to connected clients
+        // Emit updates specific to the doctor
         emitUpdateWithTimestamp(socket, doctorId);
+    
+        console.log(`Token ${tokenNo} marked as completed with ending time: ${currentTime}`);
       } catch (error) {
         console.error("Error updating token:", error);
       }
