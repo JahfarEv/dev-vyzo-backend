@@ -291,10 +291,10 @@ function setupSocketIO(server) {
             tokenNo: { $ne: tokenNo },
             fileArrive: true,
             startingTime: { $exists: true, $ne: "" },
+            completed: true,
           },
           {
             endingTime: now,
-            completed: true,
           }
         );
 
