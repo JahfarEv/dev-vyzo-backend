@@ -284,7 +284,7 @@ function setupSocketIO(server) {
         );
 
         if (!tokenData || tokenData.startingTime) return null;
-        await slotModel.updateMany(
+        const tokensToUpdate =await slotModel.updateMany(
           {
             date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
@@ -299,22 +299,21 @@ function setupSocketIO(server) {
         );
 
         // Emit the tokenComplete event for the current token
-    const currentTime = moment().format("hh:mm:ss");
-    await slotModel.findOneAndUpdate(
-      {
-        date: moment().format("DD/MM/YYYY"),
-        doctor: doctorId,
-        tokenNo,
-      },
-      {
-        $set: {
-          completed: true,
-          endingTime: currentTime,
-        },
-      },
-      { new: true }
-    );
-
+        for (const token of tokensToUpdate) {
+          await slotModel.findOneAndUpdate(
+            { _id: token._id },
+            {
+              endingTime: now,
+              completed: true,
+            }
+          );
+    
+          // Call the tokenComplete logic for each token
+          const currentTime = moment().format("hh:mm:ss");
+          emitUpdateWithTimestamp(socket, doctorId);
+          console.log(`Token ${token.tokenNo} marked as completed with ending time: ${currentTime}`);
+        }
+    
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
         console.log(error);
