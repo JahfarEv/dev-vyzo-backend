@@ -284,19 +284,22 @@ function setupSocketIO(server) {
         );
 
         if (!tokenData || tokenData.startingTime) return null;
-        await slotModel.updateMany(
+       const nextToken = await slotModel.updateMany(
           {
             date: moment().format("DD/MM/YYYY"),
             doctor: doctorId,
             tokenNo: { $ne: tokenNo },
             fileArrive: true,
             startingTime: { $exists: true, $ne: "" },
-            completed: true,
           },
-          {
-            endingTime: now,
-          }
+          
         );
+        if(nextToken){
+          await slotModel.updateMany({
+            completed: true,
+            endingTime: now,
+          })
+        }
 
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
