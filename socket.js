@@ -298,6 +298,23 @@ function setupSocketIO(server) {
           }
         );
 
+        // Emit the tokenComplete event for the current token
+    const currentTime = moment().format("hh:mm:ss");
+    await slotModel.findOneAndUpdate(
+      {
+        date: moment().format("DD/MM/YYYY"),
+        doctor: doctorId,
+        tokenNo,
+      },
+      {
+        $set: {
+          completed: true,
+          endingTime: currentTime,
+        },
+      },
+      { new: true }
+    );
+
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
         console.log(error);
