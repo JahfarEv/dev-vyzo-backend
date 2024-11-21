@@ -333,7 +333,7 @@ function setupSocketIO(server) {
         if (!tokenData || tokenData.startingTime) return null;
     
         // Find and update other tokens with a specific `endingTime`
-        const otherTokens = await slotModel.find({
+        const otherTokens = await slotModel.findByIdAndUpdate({
           date: currentDate,
           doctor: doctorId,
           tokenNo: { $ne: tokenNo },
