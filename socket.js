@@ -6,6 +6,7 @@ const utility = require("./helpers/utility");
 const slotModel = require("./models/slot");
 const doctorModel = require("./models/doctor");
 const moment = require("moment-timezone");
+const doctor = require("./models/doctor");
 moment.tz.setDefault("Asia/Kolkata");
 
 function setupSocketIO(server) {
@@ -295,10 +296,21 @@ function setupSocketIO(server) {
           
         );
         if(nextToken){
-          await slotModel.updateMany({
-            completed: true,
-            endingTime: now,
-          })
+          await slotModel.findOneAndUpdate(
+            {
+              date: moment().format("DD/MM/YYYY"), // Match today's date
+              doctor: doctorId,                   // Match doctor
+              tokenNo,                            // Match token number
+            },
+            {
+              $set: {
+                completed: true,
+                endingTime: now, // Use the captured timestamp
+              },
+            },
+            { new: false } // Return the updated document
+          );
+      
         }
 
         emitUpdateWithTimestamp(socket, doctorId);
