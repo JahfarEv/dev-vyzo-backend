@@ -219,7 +219,7 @@ function setupSocketIO(server) {
               endingTime: currentTime, // Use the captured timestamp
             },
           },
-          { new: true } // Return the updated document
+          { new: false } // Return the updated document
         );
     
         if (!tokenData) {
