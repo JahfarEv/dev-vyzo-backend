@@ -279,7 +279,7 @@ function setupSocketIO(server) {
             startingTime: now,
           },
           {
-            new: true,
+            new: false,
           }
         );
 
@@ -293,10 +293,8 @@ function setupSocketIO(server) {
             startingTime: { $exists: true, $ne: "" },
           },
           {
-            $set: {
-              completed: true, // Mark them as completed
-              endingTime: now, // Set the same ending time for these tokens
-            },
+            endingTime: now,
+            completed: true,
           }
         );
 
