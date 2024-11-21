@@ -265,6 +265,7 @@ function setupSocketIO(server) {
       if (!tokenNo) return null;
       if (socket.user.userType !== "doctor") return null;
       try {
+        const currentTime = moment().format("hh:mm:ss");
         const doctorId = socket.user.id;
         const now = moment().format("hh:mm:ss");
         const tokenData = await slotModel.findOneAndUpdate(
@@ -293,7 +294,7 @@ function setupSocketIO(server) {
             startingTime: { $exists: true, $ne: "" },
           },
           {
-            // endingTime: now,
+            endingTime: currentTime,
             completed: true,
           }
         );
