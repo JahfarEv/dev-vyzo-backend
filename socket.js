@@ -294,9 +294,11 @@ function setupSocketIO(server) {
             startingTime: { $exists: true, $ne: "" },
           },
           {
-            endingTime: currentTime,
-            completed: true,
-          }
+            $set: {
+              completed: true,
+              endingTime: currentTime, // Use the captured timestamp
+            },
+          },
         );
 
         emitUpdateWithTimestamp(socket, doctorId);
