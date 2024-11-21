@@ -164,34 +164,74 @@ function setupSocketIO(server) {
     });
 
 
+    // socket.on("tokenComplete", async (tokenNo) => {
+    //   if (!tokenNo) return null;
+    //   if (socket.user.userType !== "doctor") return null;
+    //   try {
+    //     const doctorId = socket.user.id;
+    //     const tokenData = await slotModel.findOneAndUpdate(
+    //       {
+    //         date: moment().format("DD/MM/YYYY"),
+    //         doctor: doctorId,
+    //         tokenNo,
+    //       },
+    //       {
+    //         completed: true,
+    //         endingTime: moment().format("hh:mm:ss"), // Record ending time
+
+            
+    //       },
+    //       {
+    //         new: false,
+    //       }
+    //     );
+
+
+    //     emitUpdateWithTimestamp(socket, doctorId);
+    //   } catch (error) {
+    //     console.log(error);
+    //   }
+    // });
+
+
+    //test completed
+
     socket.on("tokenComplete", async (tokenNo) => {
       if (!tokenNo) return null;
       if (socket.user.userType !== "doctor") return null;
+    
       try {
         const doctorId = socket.user.id;
+    
+        // Update the token and set the ending time
         const tokenData = await slotModel.findOneAndUpdate(
           {
-            date: moment().format("DD/MM/YYYY"),
-            doctor: doctorId,
-            tokenNo,
+            date: moment().format("DD/MM/YYYY"), // Match today's date
+            doctor: doctorId,                   // Match doctor
+            tokenNo,                            // Match token number
           },
           {
-            completed: true,
-            endingTime: moment().format("hh:mm:ss"), // Record ending time
-
-            
+            $set: {
+              completed: true,
+              endingTime: moment().format("hh:mm:ss"), // Set ending time dynamically
+            },
           },
-          {
-            new: false,
-          }
+          { new: true } // Return the updated document
         );
-
-
+    
+        // If no token is found, handle it gracefully
+        if (!tokenData) {
+          console.log(`Token not found or already updated for token number: ${tokenNo}`);
+          return;
+        }
+    
+        // Emit updates to connected clients
         emitUpdateWithTimestamp(socket, doctorId);
       } catch (error) {
-        console.log(error);
+        console.error("Error updating token:", error);
       }
     });
+    
 
 
     //update consultation time

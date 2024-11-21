@@ -54,7 +54,6 @@ const updateProfile = async (req, res) => {
   try {
     let { totalTokensPerDay, recallAfter, consultationTime, patientDetails } =
       req.body;
-    console.log(consultationTime);
 
     // Ensure averageConsultationTime is stored in minutes
     if (consultationTime < 0) {

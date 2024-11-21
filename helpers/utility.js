@@ -1002,7 +1002,7 @@ static async currentToken(doctorId, additionalTime = 0) {
       return url;
     } catch (error) {
       throw error;
-    }
+    } 
   }
 }
 
