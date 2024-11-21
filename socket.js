@@ -261,116 +261,50 @@ function setupSocketIO(server) {
       }
     });
 
-    // socket.on("takeFile", async (tokenNo) => {
-    //   if (!tokenNo) return null;
-    //   if (socket.user.userType !== "doctor") return null;
-    //   try {
-    //     const doctorId = socket.user.id;
-    //     const now = moment().format("hh:mm:ss");
-    //     const tokenData = await slotModel.findOneAndUpdate(
-    //       {
-    //         date: moment().format("DD/MM/YYYY"),
-    //         doctor: doctorId,
-    //         tokenNo,
-    //         fileArrive: true,
-    //         completed:false
-    //       },
-    //       {
-    //         startingTime: now,
-    //       },
-    //       {
-    //         new: false,
-    //       }
-    //     );
+    socket.on("takeFile", async (tokenNo) => {
+      if (!tokenNo) return null;
+      if (socket.user.userType !== "doctor") return null;
+      try {
+        const doctorId = socket.user.id;
+        const now = moment().format("hh:mm:ss");
+        const tokenData = await slotModel.findOneAndUpdate(
+          {
+            date: moment().format("DD/MM/YYYY"),
+            doctor: doctorId,
+            tokenNo,
+            fileArrive: true,
+            completed:false
+          },
+          {
+            startingTime: now,
+          },
+          {
+            new: false,
+          }
+        );
 
-    //     if (!tokenData || tokenData.startingTime) return null;
-    //     await slotModel.updateMany(
-    //       {
-    //         date: moment().format("DD/MM/YYYY"),
-    //         doctor: doctorId,
-    //         tokenNo: { $ne: tokenNo },
-    //         fileArrive: true,
-    //         startingTime: { $exists: true, $ne: "" },
-    //       },
-    //       {
-    //         endingTime: now,
-    //         completed: true,
-    //       }
-    //     );
+        if (!tokenData || tokenData.startingTime) return null;
+        await slotModel.updateMany(
+          {
+            date: moment().format("DD/MM/YYYY"),
+            doctor: doctorId,
+            tokenNo: { $ne: tokenNo },
+            fileArrive: true,
+            startingTime: { $exists: true, $ne: "" },
+          },
+          {
+            endingTime: now,
+            completed: true,
+          }
+        );
 
-    //     emitUpdateWithTimestamp(socket, doctorId);
-    //   } catch (error) {
-    //     console.log(error);
-    //   }
-    // });
+        emitUpdateWithTimestamp(socket, doctorId);
+      } catch (error) {
+        console.log(error);
+      }
+    });
 
-   //test 
-
-
-
-   socket.on("takeFile", async (tokenNo) => {
-    if (!tokenNo) return null;
-    if (socket.user.userType !== "doctor") return null;
-  
-    try {
-      const doctorId = socket.user.id;
-      const now = moment().format("hh:mm:ss");
-  
-      // Step 1: Update the specific token when file arrives (only if not completed)
-      const tokenData = await slotModel.findOneAndUpdate(
-        {
-          date: moment().format("DD/MM/YYYY"),
-          doctor: doctorId,
-          tokenNo,
-          fileArrive: true,
-          completed: false, // Make sure the token is not already completed
-        },
-        {
-          startingTime: now, // Set the starting time for this specific token
-        },
-        {
-          new: true, // Return the updated token
-        }
-      );
-  
-      // If token is not found or it already has a startingTime, return null
-      if (!tokenData || tokenData.startingTime) return null;
-  
-      // Step 2: Update all other tokens with the same fileArrive flag and startingTime but not the specific token
-      await slotModel.updateMany(
-        {
-          date: moment().format("DD/MM/YYYY"),
-          doctor: doctorId,
-          tokenNo: { $ne: tokenNo }, // Exclude the current token
-          fileArrive: true,
-          startingTime: { $exists: true, $ne: "" }, // Only update tokens that have a starting time
-        },
-        {
-          endingTime: now, // Set endingTime for these tokens
-          completed: true, // Mark as completed
-        }
-      );
-  
-      // Step 3: Update the specific token's ending time and mark as completed
-      await slotModel.findOneAndUpdate(
-        {
-          date: moment().format("DD/MM/YYYY"),
-          doctor: doctorId,
-          tokenNo,
-        },
-        {
-          endingTime: now, // Set ending time when the token is completed
-          completed: true, // Mark the token as completed
-        }
-      );
-  
-      // Emit updates specific to the doctor
-      emitUpdateWithTimestamp(socket, doctorId);
-    } catch (error) {
-      console.log(error);
-    }
-  });
-  
+   
 
     socket.on("changeOrderToken", async (data) => {
       try {
