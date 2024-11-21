@@ -53,4 +53,17 @@ tokenStatus: { // New field for token status
 
 SlotSchema.index({ doctor: 1, date: 1, tokenNo: 1 }, { unique: true });
 
+// Middleware to automatically set endingTime when completed is true
+SlotSchema.pre('findOneAndUpdate', async function (next) {
+  const update = this.getUpdate();
+
+  // Check if `completed` is being set to true
+  if (update.$set && update.$set.completed === true) {
+    // Set `endingTime` with the current time
+    update.$set.endingTime = moment().format("hh:mm:ss");
+  }
+
+  next();
+});
+
 module.exports = mongoose.model("Slots", SlotSchema);
