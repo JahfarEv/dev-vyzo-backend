@@ -51,7 +51,7 @@ tokenStatus: { // New field for token status
   minimize: false,
 });
 
-SlotSchema.index({ doctor: 1, date: 1, tokenNo: 1 }, { unique: true });
+// SlotSchema.index({ doctor: 1, date: 1, tokenNo: 1 }, { unique: true });
 
 SlotSchema.pre('findOneAndUpdate', async function (next) {
   const update = this.getUpdate();
