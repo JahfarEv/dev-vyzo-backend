@@ -181,7 +181,7 @@ function setupSocketIO(server) {
     };
     
     // Socket event for handling file processing
-    module.exports = (socket) => {
+   
       socket.on("takeFile", async (tokenNo) => {
         if (!tokenNo) return null;
         if (socket.user.userType !== "doctor") return null;
@@ -269,7 +269,7 @@ function setupSocketIO(server) {
           console.error("Error updating token:", error);
         }
       });
-    };
+
 
     // socket.on("tokenComplete", async (tokenNo) => {
     //   if (!tokenNo) return null;
