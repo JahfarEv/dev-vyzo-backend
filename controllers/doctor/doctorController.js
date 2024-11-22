@@ -89,6 +89,12 @@ const updateProfile = async (req, res) => {
       { $set: { consultationTime: consultationTime } } 
     );
 
+    const doctorTemplate = await doctorTemplateModel.findOneAndUpdate(
+      { doctor: req.doctorData.doctorId }, // Find doctor-specific template
+      { $set: { consultationTime: consultationTime } }, // Update default consultationTime
+      { upsert: true, new: true } // Create if not existing
+    );
+
     return res.status(status.SUCCESS).send(
       utility.successRes(MSG.updatedSuccessfully, {
         updatedDoctor
