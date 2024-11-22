@@ -123,6 +123,57 @@ class Utility {
   // };
 
 
+  static async markTokenAsCompleted  (tokenNo, doctorId) {
+    try {
+      // Validate inputs
+      if (!tokenNo || !doctorId) {
+        throw new Error("Token number or doctor ID is missing.");
+      }
+  
+      // Get today's date
+      const currentDate = moment().format("DD/MM/YYYY");
+  
+      // Find the token and check if it exists
+      const token = await slotModel.findOne({
+        date: currentDate,
+        doctor: doctorId,
+        tokenNo,
+      });
+  
+      if (!token) {
+        throw new Error(`No token found for tokenNo: ${tokenNo}`);
+      }
+  
+      // Update the `completed` field and set the `endingTime`
+      if (!token.completed) {
+        const updatedToken = await slotModel.findOneAndUpdate(
+          {
+            date: currentDate,
+            doctor: doctorId,
+            tokenNo,
+          },
+          {
+            $set: {
+              completed: true,
+              endingTime: moment().format("hh:mm:ss"),
+            },
+          },
+          { new: true }
+        );
+  
+        console.log(`Token ${tokenNo} marked as completed.`, updatedToken);
+        return updatedToken;
+      } else {
+        console.log(`Token ${tokenNo} is already marked as completed.`);
+        return null;
+      }
+    } catch (error) {
+      console.error("Error marking token as completed:", error);
+      throw error;
+    }
+  };
+  
+
   
   
   static async saveSlotsToDailyReport () {
