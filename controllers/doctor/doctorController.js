@@ -182,10 +182,50 @@ const doctorDetails = async (req, res) => {
 };
 
 
+// const getTodayTokens = async (req, res) => {
+//   try {
+//     const { doctorId } = req.doctorData;
+
+//     let slots = await slotModel
+//       .find({
+//         date: moment().format("DD/MM/YYYY"),
+//         doctor: doctorId,
+//       })
+//       .sort("orderNumber")
+//       .select(
+//         "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus consultationTime initialSetup completed"
+//       )
+//       .lean();
+
+//     if (!slots.length) {
+//       slots = await utility.feedTokens(doctorId);
+//     }
+
+//     const presenceData = await utility.doctorPresenceStatus(doctorId);
+//     const doctor = await doctorModel.findById(doctorId).lean();
+
+//     return res.status(status.SUCCESS).send(
+//       utility.successRes(MSG.foundSuccessfully, {
+//         tokens: slots,
+//         presenceData,
+//         doctor,
+//         // averageConsultationTimes, // Include average consultation time in the response
+//       })
+//     );
+//   } catch (error) {
+//     console.log(error);
+//     return res
+//       .status(status.ERROR)
+//       .send(utility.errorRes(MSG.somethingWentWrong));
+//   }
+// };
+
+
 const getTodayTokens = async (req, res) => {
   try {
     const { doctorId } = req.doctorData;
 
+    // Fetch today's tokens
     let slots = await slotModel
       .find({
         date: moment().format("DD/MM/YYYY"),
@@ -197,19 +237,47 @@ const getTodayTokens = async (req, res) => {
       )
       .lean();
 
+    // If no slots are found, feed tokens
     if (!slots.length) {
       slots = await utility.feedTokens(doctorId);
     }
 
+    // Fetch the doctor's consultation time from DoctorTemplateSchema
+    const doctorTemplate = await doctorTemplateModel.findOne({ doctor: doctorId });
+
+    if (doctorTemplate && doctorTemplate.consultationTime) {
+      // Update consultationTime for all slots if not already set or if it differs
+      await slotModel.updateMany(
+        {
+          date: moment().format("DD/MM/YYYY"),
+          doctor: doctorId,
+        },
+        { $set: { consultationTime: doctorTemplate.consultationTime } }
+      );
+
+      // Refresh slots after updating
+      slots = await slotModel
+        .find({
+          date: moment().format("DD/MM/YYYY"),
+          doctor: doctorId,
+        })
+        .sort("orderNumber")
+        .select(
+          "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus consultationTime initialSetup completed"
+        )
+        .lean();
+    }
+
+    // Fetch doctor presence status and details
     const presenceData = await utility.doctorPresenceStatus(doctorId);
     const doctor = await doctorModel.findById(doctorId).lean();
 
+    // Send response
     return res.status(status.SUCCESS).send(
       utility.successRes(MSG.foundSuccessfully, {
         tokens: slots,
         presenceData,
         doctor,
-        // averageConsultationTimes, // Include average consultation time in the response
       })
     );
   } catch (error) {
@@ -219,6 +287,7 @@ const getTodayTokens = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
+
 
 
 //patient details
