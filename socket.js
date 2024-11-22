@@ -217,7 +217,7 @@ function setupSocketIO(server) {
               doctor: doctorId,
               tokenNo: { $ne: tokenNo },
               fileArrive: true,
-              startingTime: { $exists: true, $ne: "" },
+              startingTime: {  $ne: "" },
             },
             
           );
