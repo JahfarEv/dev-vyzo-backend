@@ -292,10 +292,10 @@ function setupSocketIO(server) {
             fileArrive: true,
             startingTime: { $exists: true, $ne: "" },
           },
-          // {
-          //   endingTime: now,
-          //   completed: true,
-          // }
+          {
+            // endingTime: now,
+            completed: false,
+          }
         );
         
 
