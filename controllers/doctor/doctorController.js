@@ -14,6 +14,7 @@ const XLSX = require("xlsx"); // Import xlsx package
 const fs = require("fs"); // To handle file system operations
 const path = require("path");
 const doctorPresence = require("../../models/doctorPresence");
+const doctorTemplateModel = require("../../models/doctorTemplate")
 
 
 // Schedule a cron job to run every day at midnight (00:00)
