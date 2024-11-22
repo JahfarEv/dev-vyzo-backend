@@ -216,7 +216,7 @@ function setupSocketIO(server) {
           {
             $set: {
               completed: true,
-              // endingTime: currentTime, // Use the captured timestamp
+              endingTime: currentTime, // Use the captured timestamp
             },
           },
           { new: true } // Return the updated document
@@ -293,7 +293,7 @@ function setupSocketIO(server) {
             startingTime: { $exists: true, $ne: "" },
           },
           {
-            // endingTime: now,
+            endingTime: now,
             completed: true,
           }
         );
