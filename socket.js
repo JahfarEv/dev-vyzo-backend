@@ -219,7 +219,7 @@ function setupSocketIO(server) {
               fileArrive: true,
               startingTime: { $exists: true, $ne: "" },
             },
-            now
+            
           );
     
           // Emit updates to clients
