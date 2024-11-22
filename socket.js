@@ -294,7 +294,7 @@ function setupSocketIO(server) {
           },
           {
             // endingTime: now,
-            completed: false,
+            completed: true,
           }
         );
         
