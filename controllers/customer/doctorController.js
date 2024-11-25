@@ -47,7 +47,8 @@ const liveStatusOfDoctor = async (req, res) => {
       doctorDetails: {},
       doctorStatus: null,
       currentToken: null,
-      upcomingSlots: []
+      upcomingSlots: [],
+      
     }
 
     result.doctorDetails = await doctorModel.findById(doctorId)

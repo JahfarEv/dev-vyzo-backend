@@ -246,26 +246,35 @@ const getTodayTokens = async (req, res) => {
     const doctorTemplate = await doctorTemplateModel.findOne({ doctor: doctorId });
 
     if (doctorTemplate && doctorTemplate.consultationTime) {
-      // Update consultationTime for all slots if not already set or if it differs
-      await slotModel.updateMany(
-        {
-          date: moment().format("DD/MM/YYYY"),
-          doctor: doctorId,
-        },
-        { $set: { consultationTime: doctorTemplate.consultationTime } }
-      );
+      // Check if consultationTime is already set for today's slots
+      const consultationTimeExists = await slotModel.exists({
+        date: moment().format("DD/MM/YYYY"),
+        doctor: doctorId,
+        consultationTime: doctorTemplate.consultationTime, // Check for matching consultation time
+      });
 
-      // Refresh slots after updating
-      slots = await slotModel
-        .find({
-          date: moment().format("DD/MM/YYYY"),
-          doctor: doctorId,
-        })
-        .sort("orderNumber")
-        .select(
-          "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus consultationTime initialSetup completed"
-        )
-        .lean();
+      // Update consultationTime for all slots only if it's not already set
+      if (!consultationTimeExists) {
+        await slotModel.updateMany(
+          {
+            date: moment().format("DD/MM/YYYY"),
+            doctor: doctorId,
+          },
+          { $set: { consultationTime: doctorTemplate.consultationTime } }
+        );
+
+        // Refresh slots after updating
+        slots = await slotModel
+          .find({
+            date: moment().format("DD/MM/YYYY"),
+            doctor: doctorId,
+          })
+          .sort("orderNumber")
+          .select(
+            "tokenNo orderNumber fileArrive startingTime endingTime tokenStatus doctorStatus consultationTime initialSetup completed"
+          )
+          .lean();
+      }
     }
 
     // Fetch doctor presence status and details
@@ -287,7 +296,6 @@ const getTodayTokens = async (req, res) => {
       .send(utility.errorRes(MSG.somethingWentWrong));
   }
 };
-
 
 
 //patient details
