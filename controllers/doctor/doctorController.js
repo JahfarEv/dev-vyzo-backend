@@ -662,35 +662,77 @@ const searchPatients = async (req, res) => {
 
 
 
-const   getDoctorBreakEstimatedTimes = async (req, res) => {
+// const   getDoctorBreakEstimatedTimes = async (req, res) => {
+//   try {
+//     const { doctorId } = req.doctorData;
+//     const currentToken = await utility.currentToken(doctorId);
+//     const currentTokenNo = currentToken?.tokenNo;
+
+
+//     // Find the latest presence record for the specified doctor, sorted by date or timestamp
+//     const presenceData = await doctorPresence.findOne(
+//       { doctor: doctorId },
+//       { "breaks.estimatedTime": 1 } // Project only `estimatedTime` within `breaks`
+//     )
+//       .sort({ date: -1 }) // Sort by date in descending order to get the latest
+//       .lean();
+
+//     if (!presenceData || !presenceData.breaks || !presenceData.breaks.length) {
+//       return res
+//         .status(status.NOTFOUND)
+//         .send(utility.errorRes("No break data found for this doctor."));
+//     }
+
+//     // Get the last estimatedTime from the breaks array
+//     const lastEstimatedTime = presenceData.breaks[presenceData.breaks.length - 1].estimatedTime;
+
+//     return res.status(status.SUCCESS).send(
+//       utility.successRes("Last break estimated time fetched successfully", {
+//         doctorId,
+//         lastEstimatedTime,
+//         currentTokenNo
+//       })
+//     );
+//   } catch (error) {
+//     console.error("Error retrieving last estimated time:", error);
+//     return res
+//       .status(status.ERROR)
+//       .send(utility.errorRes("Something went wrong while fetching estimated time."));
+//   }
+// };
+const getDoctorBreakEstimatedTimes = async (req, res) => {
   try {
     const { doctorId } = req.doctorData;
     const currentToken = await utility.currentToken(doctorId);
     const currentTokenNo = currentToken?.tokenNo;
 
-
     // Find the latest presence record for the specified doctor, sorted by date or timestamp
-    const presenceData = await doctorPresence.findOne(
-      { doctor: doctorId },
-      { "breaks.estimatedTime": 1 } // Project only `estimatedTime` within `breaks`
-    )
+    const presenceData = await doctorPresence
+      .findOne(
+        { doctor: doctorId },
+        { "breaks.estimatedTime": 1 } // Project only `estimatedTime` within `breaks`
+      )
       .sort({ date: -1 }) // Sort by date in descending order to get the latest
       .lean();
 
     if (!presenceData || !presenceData.breaks || !presenceData.breaks.length) {
-      return res
-        .status(status.NOTFOUND)
-        .send(utility.errorRes("No break data found for this doctor."));
+      return res.status(status.NOTFOUND).send(
+        utility.successRes("No break data found for this doctor.", {
+          doctorId,
+          currentTokenNo,
+        })
+      );
     }
 
     // Get the last estimatedTime from the breaks array
-    const lastEstimatedTime = presenceData.breaks[presenceData.breaks.length - 1].estimatedTime;
+    const lastEstimatedTime =
+      presenceData.breaks[presenceData.breaks.length - 1].estimatedTime;
 
     return res.status(status.SUCCESS).send(
       utility.successRes("Last break estimated time fetched successfully", {
         doctorId,
         lastEstimatedTime,
-        currentTokenNo
+        currentTokenNo,
       })
     );
   } catch (error) {
