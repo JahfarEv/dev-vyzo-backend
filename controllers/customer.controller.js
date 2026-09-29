@@ -1,7 +1,7 @@
-const utility = require('../../helpers/utility')
-const validate = require('../../helpers/validate')
-const doctorModel = require('../../models/doctor')
-const { status, MSG, } = require('../../helpers/constants')
+const utility = require('../helpers/utility')
+const validate = require('../helpers/validate')
+const doctorModel = require('../models/doctor')
+const { status, MSG, } = require('../helpers/constants')
 
 const getDoctors = async (req, res) => {
   try {

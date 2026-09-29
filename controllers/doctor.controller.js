@@ -1,20 +1,20 @@
-const utility = require("../../helpers/utility");
-const validate = require("../../helpers/validate");
-const doctorPresenceModel = require("../../models/doctorPresence");
-const slotModel = require("../../models/slot");
-const { status, MSG } = require("../../helpers/constants");
+const utility = require("../helpers/utility");
+const validate = require("../helpers/validate");
+const doctorPresenceModel = require("../models/doctorPresence");
+const slotModel = require("../models/slot");
+const { status, MSG } = require("../helpers/constants");
 const moment = require("moment-timezone");
-const doctorModel = require("../../models/doctor");
+const doctorModel = require("../models/doctor");
 moment.tz.setDefault("Asia/Kolkata");
 const cron = require("node-cron");
-const patientModel = require("../../models/patients");
-const { saveSlotsToDailyReport } = require("../../helpers/utility");
+const patientModel = require("../models/patients");
+const { saveSlotsToDailyReport } = require("../helpers/utility");
 const { default: mongoose } = require("mongoose");
 const XLSX = require("xlsx"); // Import xlsx package
 const fs = require("fs"); // To handle file system operations
 const path = require("path");
-const doctorPresence = require("../../models/doctorPresence");
-const doctorTemplateModel = require("../../models/doctorTemplate")
+const doctorPresence = require("../models/doctorPresence");
+const doctorTemplateModel = require("../models/doctorTemplate")
 
 
 // Schedule a cron job to run every day at midnight (00:00)

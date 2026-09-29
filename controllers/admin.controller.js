@@ -1,10 +1,10 @@
-const doctorModel = require("../../models/doctor");
-const utility = require("../../helpers/utility");
-const validate = require("../../helpers/validate");
-const { status, MSG } = require("../../helpers/constants");
-const DailyReportModel = require("../../models/dailyReport");
-const slotModel = require("../../models/slot")
-const patientModel = require("../../models/patients")
+const doctorModel = require("../models/doctor");
+const utility = require("../helpers/utility");
+const validate = require("../helpers/validate");
+const { status, MSG } = require("../helpers/constants");
+const DailyReportModel = require("../models/dailyReport");
+const slotModel = require("../models/slot")
+const patientModel = require("../models/patients")
 
 const createDoctor = async (req, res) => {
   try {

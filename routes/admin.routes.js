@@ -1,5 +1,5 @@
 const router = require('express').Router()
-const doctorController = require('../../controllers/admin/doctorController')
+const doctorController = require('../controllers/admin.controller')
 
 router.post('/doctor', doctorController.createDoctor)
   .get('/doctor', doctorController.getDoctors)

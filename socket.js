@@ -6,6 +6,7 @@ const utility = require("./helpers/utility");
 const slotModel = require("./models/slot");
 const doctorModel = require("./models/doctor");
 const moment = require("moment-timezone");
+const { default: mongoose } = require("mongoose");
 moment.tz.setDefault("Asia/Kolkata");
 
 function setupSocketIO(server) {
@@ -59,18 +60,38 @@ function setupSocketIO(server) {
     global.chatSocket = socket;
     onlineUsers.set(socket.user, socket.id);
 
-    const emitUpdateWithTimestamp = async (socket, doctorId) => {
+    const emitUpdateWithTimestamp = async (socket, doctorData) => {
+      console.log('Received doctorData:', doctorData); // Log the object containing doctorId and roomName
+      
+      const doctorId = doctorData.doctorId; // Extract the doctorId from the object
+      const roomName = doctorData.roomName; // Extract the roomName if needed
+      
       const updatedData = {};
-      updatedData.doctorStatus = await utility.doctorPresenceStatus(doctorId);
-      updatedData.currentToken = await utility.currentToken(doctorId);
-      updatedData.upcomingSlots = await utility.upcomingTokens(doctorId);
-      updatedData.slots = await utility.tokensOfDoctor(doctorId);
-      updatedData.lastUpdated = moment().format("hh:mm:ss"); // Capture the last updated time
-
-      const roomName = `${doctorId}-${moment().format("DD/MM/YYYY")}`;
-      io.to(roomName).emit("receiveUpdate", updatedData);
-      io.to(socket.id).emit("receiveUpdate", updatedData);
+    
+      try {
+        // Validate and convert doctorId to ObjectId if it's a valid string
+        const validDoctorId = doctorId && typeof doctorId === 'string' ? new mongoose.Types.ObjectId(doctorId) : null;
+    
+        if (!validDoctorId) {
+          throw new Error("Invalid doctorId format");
+        }
+    
+        updatedData.doctorStatus = await utility.doctorPresenceStatus(validDoctorId);
+        updatedData.currentToken = await utility.currentToken(validDoctorId);
+        updatedData.upcomingSlots = await utility.upcomingTokens(validDoctorId);
+        updatedData.slots = await utility.tokensOfDoctor(validDoctorId);
+        updatedData.lastUpdated = moment().format("hh:mm:ss");
+    
+        // Send updated data to the room
+        io.to(roomName).emit("receiveUpdate", updatedData);
+        io.to(socket.id).emit("receiveUpdate", updatedData);
+    
+      } catch (error) {
+        console.error('Error in emitUpdateWithTimestamp:', error);
+      }
     };
+    
+    
 
     if (socket.user.userType === "doctor") {
       const currentData = {};

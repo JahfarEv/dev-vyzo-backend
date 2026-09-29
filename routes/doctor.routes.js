@@ -1,5 +1,5 @@
 const router = require("express").Router();
-const doctorController = require("../../controllers/doctor/doctorController");
+const doctorController = require("../controllers/doctor.controller");
 
 router
   .put("/udpateProfile", doctorController.updateProfile)
